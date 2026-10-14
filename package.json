@@ -8,7 +8,9 @@
     "start": "node src/server.js",
     "test": "jest --runInBand",
     "lint": "eslint .",
-    "migrate": "node-pg-migrate -m db/migrations --envPath .env"
+    "migrate": "node-pg-migrate -m db/migrations --envPath .env",
+    "migrate:test": "DATABASE_URL=postgres://bank:bankpass@localhost:5432/minibank_test npm run migrate -- up",
+    "pretest": "npm run migrate:test"
   },
   "keywords": [],
   "author": "",
