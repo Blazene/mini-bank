@@ -4,11 +4,12 @@
   "description": "",
   "main": "src/server.js",
   "scripts": {
-  "dev": "nodemon src/server.js",
-  "start": "node src/server.js",
-  "test": "jest --runInBand",
-  "lint": "eslint ."
-},
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "test": "jest --runInBand",
+    "lint": "eslint .",
+    "migrate": "node-pg-migrate -m db/migrations --envPath .env"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -17,6 +18,7 @@
     "dotenv": "^18.0.7",
     "express": "^5.3.0",
     "helmet": "^8.3.0",
+    "node-pg-migrate": "^9.0.0",
     "pg": "^8.23.1",
     "pino": "^10.4.0",
     "pino-http": "^11.0.0",
