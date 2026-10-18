@@ -2,6 +2,11 @@ const bcrypt = require('bcrypt');
 const env = require('../../config/env');
 const AppError = require('../../shared/utils/AppError');
 const repository = require('./auth.repository');
+const { signAccessToken } = require('./auth.tokens');
+
+// A real hash of a throwaway password. When the email is unknown we still run a compare
+// against it, so "no such user" takes about as long as "wrong password".
+const DUMMY_HASH = bcrypt.hashSync('dummy-password-for-timing', env.BCRYPT_ROUNDS);
 
 async function register({ email, fullName, password }) {
   const passwordHash = await bcrypt.hash(password, env.BCRYPT_ROUNDS);
@@ -17,4 +22,18 @@ async function register({ email, fullName, password }) {
   }
 }
 
-module.exports = { register };
+async function login({ email, password }) {
+  const found = await repository.findByEmailWithHash(email);
+
+  const passwordMatches = await bcrypt.compare(password, found ? found.passwordHash : DUMMY_HASH);
+
+  // One message for both failures, so an attacker cannot tell which emails exist.
+  if (!found || !passwordMatches) {
+    throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
+  }
+
+  // found.user never contains the hash, so it is safe to return.
+  return { token: signAccessToken(found.user), user: found.user };
+}
+
+module.exports = { register, login };

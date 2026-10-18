@@ -20,4 +20,17 @@ async function createUser({ email, fullName, passwordHash }) {
   return toUser(rows[0]);
 }
 
-module.exports = { createUser };
+// Used only by login. This is the one place the hash is read, and it never leaves the service.
+// lower(email) matches the users_email_unique index, so the lookup is fast.
+async function findByEmailWithHash(email) {
+  const { rows } = await db.query(
+    `SELECT id, email, full_name, role, created_at, password_hash
+     FROM users
+     WHERE lower(email) = lower($1)`,
+    [email]
+  );
+  if (rows.length === 0) return null;
+  return { user: toUser(rows[0]), passwordHash: rows[0].password_hash };
+}
+
+module.exports = { createUser, findByEmailWithHash };
