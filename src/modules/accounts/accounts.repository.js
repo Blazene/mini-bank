@@ -1,15 +1,5 @@
 const db = require('../../config/db');
-
-// pg returns BIGINT as a string, because JavaScript numbers are only exact up to 2^53 - 1.
-// Balances are whole paise, so the conversion is exact for any balance below that limit
-// (about 90 trillion rupees). Above it we refuse to answer rather than return a wrong number.
-function paiseToNumber(value) {
-  const number = Number(value);
-  if (!Number.isSafeInteger(number)) {
-    throw new Error(`Balance ${value} cannot be represented exactly as a JavaScript number`);
-  }
-  return number;
-}
+const { paiseToNumber } = require('../../shared/utils/money');
 
 // Convert a database row (snake_case) into the object the app uses (camelCase).
 // user_id is left out on purpose: callers only ever see their own accounts.
@@ -58,4 +48,39 @@ async function findByIdForUser(accountId, userId) {
   return rows.length === 0 ? null : toAccount(rows[0]);
 }
 
-module.exports = { createAccount, findAllByUser, findByIdForUser };
+// The two functions below take the client of an OPEN transaction (see db.withTransaction),
+// because they must run on the same connection as the rest of the money movement.
+
+// SELECT ... FOR UPDATE locks the row until the transaction ends. Anyone else who wants to
+// change this balance waits here, so two requests can never both act on the same old balance.
+async function lockByIdForUser(client, accountId, userId) {
+  const { rows } = await client.query(
+    `SELECT ${COLUMNS}
+     FROM accounts
+     WHERE id = $1 AND user_id = $2
+     FOR UPDATE`,
+    [accountId, userId]
+  );
+  return rows.length === 0 ? null : toAccount(rows[0]);
+}
+
+// Relative update (balance + delta), not "set balance to this number". Negative delta = debit.
+// The CHECK (balance >= 0) in the database is the last line of defence if a rule is ever missed.
+async function adjustBalance(client, accountId, deltaPaise) {
+  const { rows } = await client.query(
+    `UPDATE accounts
+     SET balance = balance + $2
+     WHERE id = $1
+     RETURNING ${COLUMNS}`,
+    [accountId, deltaPaise]
+  );
+  return toAccount(rows[0]);
+}
+
+module.exports = {
+  createAccount,
+  findAllByUser,
+  findByIdForUser,
+  lockByIdForUser,
+  adjustBalance,
+};
