@@ -36,4 +36,14 @@ async function login({ email, password }) {
   return { token: signAccessToken(found.user), user: found.user };
 }
 
-module.exports = { register, login };
+// The token proves who the caller WAS when it was issued. This reads who they are NOW.
+async function getCurrentUser(userId) {
+  const user = await repository.findById(userId);
+  if (!user) {
+    // A valid token for a user that no longer exists must not keep working.
+    throw new AppError('Invalid token', 401, 'INVALID_TOKEN');
+  }
+  return user;
+}
+
+module.exports = { register, login, getCurrentUser };

@@ -33,4 +33,15 @@ async function findByEmailWithHash(email) {
   return { user: toUser(rows[0]), passwordHash: rows[0].password_hash };
 }
 
-module.exports = { createUser, findByEmailWithHash };
+// Used by GET /auth/me. Returns the safe user shape only, never the hash.
+async function findById(id) {
+  const { rows } = await db.query(
+    `SELECT id, email, full_name, role, created_at
+     FROM users
+     WHERE id = $1`,
+    [id]
+  );
+  return rows.length === 0 ? null : toUser(rows[0]);
+}
+
+module.exports = { createUser, findByEmailWithHash, findById };
