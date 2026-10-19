@@ -22,3 +22,27 @@ test('replaces req.body with cleaned data and calls next with no error', () => {
   expect(req.body.email).toBe('a@x.com');
   expect(req.body.role).toBeUndefined();
 });
+
+describe('validating a different part of the request', () => {
+  const { accountIdParamsSchema } = require('../../../modules/accounts/accounts.schema');
+
+  test('checks req.params when asked to, and fails with a 400', () => {
+    const next = jest.fn();
+    validate(accountIdParamsSchema, 'params')({ params: { id: 'nope' } }, {}, next);
+
+    const err = next.mock.calls[0][0];
+    expect(err.statusCode).toBe(400);
+    expect(err.details[0].field).toBe('id');
+  });
+
+  test('accepts valid params and leaves req.body alone', () => {
+    const next = jest.fn();
+    const id = '11111111-1111-4111-8111-111111111111';
+    const req = { params: { id }, body: { keep: 'me' } };
+    validate(accountIdParamsSchema, 'params')(req, {}, next);
+
+    expect(next).toHaveBeenCalledWith();
+    expect(req.params).toEqual({ id });
+    expect(req.body).toEqual({ keep: 'me' });
+  });
+});
