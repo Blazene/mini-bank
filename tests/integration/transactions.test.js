@@ -3,10 +3,14 @@ const app = require('../../src/app');
 const { pool, resetDb, createAccount } = require('../helpers/db');
 const { registerAndLogin } = require('../helpers/auth');
 
+// Every money request needs an Idempotency-Key. By default each call gets a fresh one, so these
+// tests behave like separate requests. Retries are tested in idempotency.test.js.
+let keyCounter = 0;
 const post = (token, path, body) =>
   request(app)
     .post(`/api/v1/transactions${path}`)
     .set('Authorization', `Bearer ${token}`)
+    .set('Idempotency-Key', `test-key-${(keyCounter += 1)}`)
     .send(body);
 
 async function setup(balance = 0, email = 'a@x.com', accountNumber = 'ACC-A') {
