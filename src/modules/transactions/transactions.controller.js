@@ -24,4 +24,12 @@ async function withdraw(req, res) {
   respond(res, result);
 }
 
-module.exports = { deposit, withdraw };
+async function transfer(req, res) {
+  const result = await transactionsService.transfer(req.user.id, {
+    ...req.body,
+    idempotencyKey: req.idempotencyKey,
+  });
+  respond(res, result);
+}
+
+module.exports = { deposit, withdraw, transfer };

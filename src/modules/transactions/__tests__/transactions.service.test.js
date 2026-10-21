@@ -25,10 +25,15 @@ const account = (overrides = {}) => ({
 const previous = (overrides = {}) => ({
   id: 'tx-old',
   type: 'deposit',
+  fromAccountId: null,
+  toAccountId: ACCOUNT_ID,
   amount: 300,
   description: 'test',
   ...overrides,
 });
+
+const previousWithdrawal = (overrides = {}) =>
+  previous({ type: 'withdrawal', fromAccountId: ACCOUNT_ID, toAccountId: null, ...overrides });
 
 beforeEach(() => {
   jest.resetAllMocks();
@@ -182,7 +187,7 @@ describe('idempotency', () => {
   test('a repeated withdrawal returns the original transaction and writes nothing', async () => {
     accountsRepository.lockByIdForUser.mockResolvedValue(account());
     transactionsRepository.findByIdempotencyKey.mockResolvedValue(
-      previous({ id: 'tx-w', type: 'withdrawal' })
+      previousWithdrawal({ id: 'tx-w' })
     );
 
     const result = await service.withdraw(USER_ID, input);
@@ -203,7 +208,7 @@ describe('idempotency', () => {
 
   test('a retry still succeeds when the balance is no longer enough, because replay comes first', async () => {
     accountsRepository.lockByIdForUser.mockResolvedValue(account({ balance: 0 }));
-    transactionsRepository.findByIdempotencyKey.mockResolvedValue(previous({ type: 'withdrawal' }));
+    transactionsRepository.findByIdempotencyKey.mockResolvedValue(previousWithdrawal());
 
     const result = await service.withdraw(USER_ID, input);
 

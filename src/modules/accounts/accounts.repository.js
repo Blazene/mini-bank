@@ -48,7 +48,7 @@ async function findByIdForUser(accountId, userId) {
   return rows.length === 0 ? null : toAccount(rows[0]);
 }
 
-// The two functions below take the client of an OPEN transaction (see db.withTransaction),
+// The functions below take the client of an OPEN transaction (see db.withTransaction),
 // because they must run on the same connection as the rest of the money movement.
 
 // SELECT ... FOR UPDATE locks the row until the transaction ends. Anyone else who wants to
@@ -77,10 +77,34 @@ async function adjustBalance(client, accountId, deltaPaise) {
   return toAccount(rows[0]);
 }
 
+// Locks any account by id, whoever owns it. Used for the DESTINATION of a transfer, which
+// belongs to someone else. Never use it to decide what a user may see or spend.
+async function lockById(client, accountId) {
+  const { rows } = await client.query(
+    `SELECT ${COLUMNS}
+     FROM accounts
+     WHERE id = $1
+     FOR UPDATE`,
+    [accountId]
+  );
+  return rows.length === 0 ? null : toAccount(rows[0]);
+}
+
+// Turns the 12-digit number a person knows into the account id. A plain read with no lock:
+// an account number never changes, so the id it maps to cannot change either.
+async function findIdByAccountNumber(client, accountNumber) {
+  const { rows } = await client.query('SELECT id FROM accounts WHERE account_number = $1', [
+    accountNumber,
+  ]);
+  return rows.length === 0 ? null : rows[0].id;
+}
+
 module.exports = {
   createAccount,
   findAllByUser,
   findByIdForUser,
   lockByIdForUser,
+  lockById,
+  findIdByAccountNumber,
   adjustBalance,
 };
