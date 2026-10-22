@@ -43,4 +43,4 @@ async function findByIdempotencyKey(client, accountId, idempotencyKey) {
   return rows.length === 0 ? null : toTransaction(rows[0]);
 }
 
-module.exports = { insert, findByIdempotencyKey };
+module.exports = { insert, findByIdempotencyKey, COLUMNS, toTransaction };

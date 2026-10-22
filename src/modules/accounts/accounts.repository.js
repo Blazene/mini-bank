@@ -99,6 +99,18 @@ async function findIdByAccountNumber(client, accountNumber) {
   return rows.length === 0 ? null : rows[0].id;
 }
 
+// id to account number, for a batch of ids, as a Map. Used to label the OTHER party on a
+// statement line. The caller must only pass ids taken from rows the user is allowed to see:
+// like lockById, this does not check ownership.
+async function findAccountNumbersByIds(accountIds) {
+  if (accountIds.length === 0) return new Map();
+  const { rows } = await db.query(
+    'SELECT id, account_number FROM accounts WHERE id = ANY($1::uuid[])',
+    [accountIds]
+  );
+  return new Map(rows.map((row) => [row.id, row.account_number]));
+}
+
 module.exports = {
   createAccount,
   findAllByUser,
@@ -106,5 +118,6 @@ module.exports = {
   lockByIdForUser,
   lockById,
   findIdByAccountNumber,
+  findAccountNumbersByIds,
   adjustBalance,
 };

@@ -46,3 +46,37 @@ describe('validating a different part of the request', () => {
     expect(req.body).toEqual({ keep: 'me' });
   });
 });
+
+describe('validating the query string', () => {
+  const express = require('express');
+  const request = require('supertest');
+  const { z } = require('zod');
+  const schema = z.object({ limit: z.string().transform(Number).default(20) });
+
+  // A real Express 5 app, because there req.query is a read-only getter on the request.
+  const app = express();
+  app.get('/x', validate(schema, 'query'), (req, res) => res.json({ query: req.query }));
+  app.use((err, req, res, _next) => res.status(err.statusCode).json({ details: err.details }));
+
+  test('hands the controller the CLEANED query, not the raw strings', async () => {
+    const res = await request(app).get('/x?limit=7&junk=1');
+    expect(res.body.query).toEqual({ limit: 7 });
+  });
+
+  test('fills in defaults when there is no query string at all', async () => {
+    const res = await request(app).get('/x');
+    expect(res.body.query).toEqual({ limit: 20 });
+  });
+
+  test('fails with a 400 and names the bad parameter', async () => {
+    const strict = express();
+    strict.get('/x', validate(z.object({ limit: z.enum(['a']) }), 'query'), (req, res) =>
+      res.end()
+    );
+    strict.use((err, req, res, _next) => res.status(err.statusCode).json(err.details));
+
+    const res = await request(strict).get('/x?limit=zzz');
+    expect(res.status).toBe(400);
+    expect(res.body[0].field).toBe('limit');
+  });
+});

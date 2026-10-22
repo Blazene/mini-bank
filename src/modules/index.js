@@ -2,6 +2,8 @@ const router = require('express').Router();
 
 router.use('/health', require('./health/health.routes'));
 router.use('/auth', require('./auth/auth.routes'));
+// The more specific path goes first, so /accounts/:id/transactions is never shadowed.
+router.use('/accounts/:id/transactions', require('./transactions/accountHistory.routes'));
 router.use('/accounts', require('./accounts/accounts.routes'));
 router.use('/transactions', require('./transactions/transactions.routes'));
 
