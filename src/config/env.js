@@ -12,6 +12,14 @@ const schema = z.object({
   BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(15).default(12),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
   JWT_EXPIRES_IN: z.string().default('1h'),
+  // z.coerce.boolean() would turn the text "false" into true, so we compare the text ourselves.
+  RATE_LIMIT_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
+  // How many proxies sit in front of the app (0 when clients connect directly). It decides
+  // whether X-Forwarded-For is believed, which decides what "the client IP" means.
+  TRUST_PROXY: z.coerce.number().int().min(0).default(0),
 });
 
 module.exports = schema.parse(process.env);

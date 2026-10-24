@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const validate = require('../../shared/middleware/validate');
 const requireIdempotencyKey = require('../../shared/middleware/idempotencyKey');
+const { transferLimiter, transferMissLimiter } = require('../../shared/middleware/rateLimit');
 const { requireAuth } = require('../auth/auth.middleware');
 const { moneyMovementSchema, transferSchema } = require('./transactions.schema');
 const { listTransactionsQuerySchema } = require('./history.schema');
@@ -14,6 +15,15 @@ router.get('/', validate(listTransactionsQuerySchema, 'query'), historyControlle
 
 router.post('/deposit', requireIdempotencyKey, validate(moneyMovementSchema), controller.deposit);
 router.post('/withdraw', requireIdempotencyKey, validate(moneyMovementSchema), controller.withdraw);
-router.post('/transfer', requireIdempotencyKey, validate(transferSchema), controller.transfer);
+
+// The limiters key on req.user.id, so they must come after requireAuth (above).
+router.post(
+  '/transfer',
+  transferLimiter,
+  transferMissLimiter,
+  requireIdempotencyKey,
+  validate(transferSchema),
+  controller.transfer
+);
 
 module.exports = router;
