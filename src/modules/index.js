@@ -6,5 +6,6 @@ router.use('/auth', require('./auth/auth.routes'));
 router.use('/accounts/:id/transactions', require('./transactions/accountHistory.routes'));
 router.use('/accounts', require('./accounts/accounts.routes'));
 router.use('/transactions', require('./transactions/transactions.routes'));
+router.use('/admin/audit-logs', require('./audit/audit.routes'));
 
 module.exports = router;

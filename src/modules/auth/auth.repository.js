@@ -44,4 +44,18 @@ async function findById(id) {
   return rows.length === 0 ? null : toUser(rows[0]);
 }
 
-module.exports = { createUser, findByEmailWithHash, findById };
+// Changes a user's role. Called only by the operator script (npm run make-admin), never by an
+// API route: nobody can make themselves an admin through the API. Returns the updated user,
+// or null when no user has that email.
+async function setRoleByEmail(email, role) {
+  const { rows } = await db.query(
+    `UPDATE users
+     SET role = $2, updated_at = now()
+     WHERE lower(email) = lower($1)
+     RETURNING id, email, full_name, role, created_at`,
+    [email, role]
+  );
+  return rows.length === 0 ? null : toUser(rows[0]);
+}
+
+module.exports = { createUser, findByEmailWithHash, findById, setRoleByEmail };

@@ -1,5 +1,6 @@
 const env = require('../../src/config/env');
 const { pool } = require('../../src/config/db');
+const { flushAuditWrites } = require('../../src/modules/audit/audit.service');
 
 // Safety guard: never wipe a database that is not clearly a test database
 function assertTestDatabase() {
@@ -11,7 +12,11 @@ function assertTestDatabase() {
 
 async function resetDb() {
   assertTestDatabase();
-  await pool.query('TRUNCATE users CASCADE'); // also clears accounts and transactions
+  // Audit rows are saved just after a response is sent. Wait for them, so one is never
+  // written into a database that is being wiped.
+  await flushAuditWrites();
+  // audit_logs has no foreign key to users (on purpose), so CASCADE would not reach it: name it.
+  await pool.query('TRUNCATE users, audit_logs CASCADE'); // CASCADE also clears accounts, transactions
 }
 
 async function createUser(email = 'a@x.com') {

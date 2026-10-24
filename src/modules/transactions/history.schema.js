@@ -76,4 +76,9 @@ module.exports = {
   accountTransactionsQuerySchema,
   DEFAULT_LIMIT,
   MAX_LIMIT,
+  // Building blocks that other list endpoints reuse (the audit log does).
+  dateTimeSchema,
+  limitSchema,
+  cursorSchema,
+  withRangeCheck,
 };

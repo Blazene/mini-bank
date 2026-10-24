@@ -8,6 +8,7 @@
     "start": "node src/server.js",
     "test": "jest --runInBand",
     "lint": "eslint .",
+    "make-admin": "node scripts/make-admin.js",
     "migrate": "node-pg-migrate -m db/migrations --envPath .env",
     "migrate:test": "DATABASE_URL=postgres://bank:bankpass@localhost:5432/minibank_test npm run migrate -- up",
     "pretest": "npm run migrate:test"
