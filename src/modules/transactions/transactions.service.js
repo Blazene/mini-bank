@@ -2,6 +2,7 @@ const db = require('../../config/db');
 const AppError = require('../../shared/utils/AppError');
 const accountsRepository = require('../accounts/accounts.repository');
 const transactionsRepository = require('./transactions.repository');
+const monitoring = require('../monitoring/monitoring.service');
 
 // Locks the caller's account for the rest of the transaction.
 // Same 404 for "does not exist" and "belongs to someone else".
@@ -79,6 +80,7 @@ function deposit(userId, { accountId, amount, description, idempotencyKey }) {
       description,
       idempotencyKey,
     });
+    await monitoring.record(client, transaction);
     return { transaction, account: updated, replayed: false };
   });
 }
@@ -113,6 +115,7 @@ function withdraw(userId, { accountId, amount, description, idempotencyKey }) {
       description,
       idempotencyKey,
     });
+    await monitoring.record(client, transaction);
     return { transaction, account: updated, replayed: false };
   });
 }
@@ -185,6 +188,7 @@ function transfer(userId, { fromAccountId, toAccountNumber, amount, description,
       description,
       idempotencyKey,
     });
+    await monitoring.record(client, transaction);
     return { transaction, account: updatedSource, replayed: false };
   });
 }

@@ -4,7 +4,7 @@ const {
   limitSchema,
   cursorSchema,
   withRangeCheck,
-} = require('../transactions/history.schema');
+} = require('../../shared/validation/pagination.schema');
 const { ACTION_NAMES } = require('./audit.actions');
 
 // Query rules for GET /admin/audit-logs. The limit, date and cursor rules are the same ones the

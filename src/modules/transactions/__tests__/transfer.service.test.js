@@ -5,10 +5,12 @@ jest.mock('../../../config/db', () => ({
 }));
 jest.mock('../../accounts/accounts.repository');
 jest.mock('../transactions.repository');
+jest.mock('../../monitoring/monitoring.service');
 
 const accountsRepository = require('../../accounts/accounts.repository');
 const transactionsRepository = require('../transactions.repository');
 const service = require('../transactions.service');
+const monitoring = require('../../monitoring/monitoring.service');
 
 const USER_ID = '55555555-5555-4555-8555-555555555555';
 const LOW_ID = '11111111-1111-4111-8111-111111111111';
@@ -54,6 +56,7 @@ beforeEach(() => {
 function expectNothingWritten() {
   expect(accountsRepository.adjustBalance).not.toHaveBeenCalled();
   expect(transactionsRepository.insert).not.toHaveBeenCalled();
+  expect(monitoring.record).not.toHaveBeenCalled();
 }
 
 describe('transfer', () => {
@@ -78,6 +81,10 @@ describe('transfer', () => {
       account: { id: LOW_ID, balance: 700 },
       replayed: false,
     });
+    expect(monitoring.record).toHaveBeenCalledWith(mockClient, result.transaction);
+    expect(monitoring.record.mock.invocationCallOrder[0]).toBeGreaterThan(
+      transactionsRepository.insert.mock.invocationCallOrder[0]
+    );
   });
 
   test.each([

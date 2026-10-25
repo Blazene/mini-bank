@@ -5,10 +5,12 @@ jest.mock('../../../config/db', () => ({
 }));
 jest.mock('../../accounts/accounts.repository');
 jest.mock('../transactions.repository');
+jest.mock('../../monitoring/monitoring.service');
 
 const accountsRepository = require('../../accounts/accounts.repository');
 const transactionsRepository = require('../transactions.repository');
 const service = require('../transactions.service');
+const monitoring = require('../../monitoring/monitoring.service');
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
 const ACCOUNT_ID = '22222222-2222-4222-8222-222222222222';
@@ -45,6 +47,7 @@ beforeEach(() => {
 function expectNothingWritten() {
   expect(accountsRepository.adjustBalance).not.toHaveBeenCalled();
   expect(transactionsRepository.insert).not.toHaveBeenCalled();
+  expect(monitoring.record).not.toHaveBeenCalled();
 }
 
 describe('deposit', () => {
@@ -69,6 +72,10 @@ describe('deposit', () => {
     });
     expect(result.transaction).toEqual({ id: 'tx-1' });
     expect(result.replayed).toBe(false);
+    expect(monitoring.record).toHaveBeenCalledWith(mockClient, result.transaction);
+    expect(monitoring.record.mock.invocationCallOrder[0]).toBeGreaterThan(
+      transactionsRepository.insert.mock.invocationCallOrder[0]
+    );
   });
 
   test('throws 404 when the account is missing or belongs to someone else', async () => {
@@ -119,6 +126,7 @@ describe('withdraw', () => {
       description: 'test',
       idempotencyKey: KEY,
     });
+    expect(monitoring.record).toHaveBeenCalledWith(mockClient, { id: 'tx-1' });
   });
 
   test('allows withdrawing exactly the whole balance', async () => {

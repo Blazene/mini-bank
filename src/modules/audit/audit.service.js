@@ -1,6 +1,6 @@
 const logger = require('../../shared/utils/logger');
 const repository = require('./audit.repository');
-const { encodeCursor } = require('../transactions/history.cursor');
+const { encodeCursor } = require('../../shared/utils/pagination.cursor');
 
 // Writes that have been started but not finished. Kept so that tests, and a clean shutdown,
 // can wait until every audit row has really been saved.

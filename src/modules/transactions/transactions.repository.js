@@ -21,8 +21,8 @@ async function insert(
 ) {
   const { rows } = await client.query(
     `INSERT INTO transactions
-       (type, from_account_id, to_account_id, amount, description, idempotency_key)
-     VALUES ($1, $2, $3, $4, $5, $6)
+       (type, from_account_id, to_account_id, amount, description, idempotency_key, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, clock_timestamp())
      RETURNING ${COLUMNS}`,
     [type, fromAccountId, toAccountId, amount, description || null, idempotencyKey]
   );
@@ -43,4 +43,27 @@ async function findByIdempotencyKey(client, accountId, idempotencyKey) {
   return rows.length === 0 ? null : toTransaction(rows[0]);
 }
 
-module.exports = { insert, findByIdempotencyKey, COLUMNS, toTransaction };
+// Current transfer counts as one, regardless of how long its transaction waited on locks.
+// Count at most four OTHER completed outgoing transfers in the inclusive five-minute
+// window ending at this statement. The existing source-account index bounds the scan.
+async function countRecentOutgoingTransfers(client, accountId, currentId) {
+  const { rows } = await client.query(
+    `SELECT count(*)::int + 1 AS count FROM (
+       SELECT 1 FROM transactions
+       WHERE from_account_id = $1 AND id <> $2 AND type = 'transfer' AND status = 'completed'
+         AND created_at >= statement_timestamp() - INTERVAL '5 minutes'
+         AND created_at <= statement_timestamp()
+       LIMIT 4
+     ) recent`,
+    [accountId, currentId]
+  );
+  return rows[0].count;
+}
+
+module.exports = {
+  insert,
+  findByIdempotencyKey,
+  countRecentOutgoingTransfers,
+  COLUMNS,
+  toTransaction,
+};
