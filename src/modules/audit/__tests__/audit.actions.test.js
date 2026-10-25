@@ -4,6 +4,7 @@ test('lists every action an admin can filter by, including the one written by th
   expect(ACTION_NAMES).toEqual([
     'auth.register',
     'auth.login',
+    'loan.apply',
     'transaction.deposit',
     'transaction.withdraw',
     'transaction.transfer',
@@ -12,6 +13,25 @@ test('lists every action an admin can filter by, including the one written by th
 });
 
 describe('what is kept from a request', () => {
+  test('loan applications exclude declared income, debt and client-provided terms', () => {
+    expect(
+      pickMetadata('loan.apply', {
+        principal: 10000000,
+        tenureMonths: 12,
+        monthlyIncome: 5000000,
+        existingMonthlyEmi: 12345,
+        quote: { secret: true },
+        idempotencyKey: 'private-key',
+      })
+    ).toEqual({ principal: 10000000, tenureMonths: 12 });
+  });
+
+  test('malformed loan fields are not copied into audit metadata', () => {
+    expect(
+      pickMetadata('loan.apply', { principal: { unexpected: true }, tenureMonths: '12' })
+    ).toEqual({ principal: null, tenureMonths: null });
+  });
+
   test('login and register keep only the email', () => {
     const body = { email: 'a@x.com', password: 'secret123', fullName: 'A', extra: 1 };
     expect(pickMetadata('auth.login', body)).toEqual({ email: 'a@x.com' });

@@ -8,4 +8,6 @@ const quoteSchema = z.object({
   existingMonthlyEmi: z.number().int().min(0).max(100_000_000).default(0),
 });
 
-module.exports = { quoteSchema };
+const applicationIdSchema = z.object({ id: z.uuid('Application id must be a valid UUID') });
+
+module.exports = { quoteSchema, applicationIdSchema };

@@ -14,6 +14,11 @@ const asObject = (body) =>
 const REQUEST_ACTIONS = {
   'auth.register': (body) => ({ email: text(body.email) }),
   'auth.login': (body) => ({ email: text(body.email) }),
+  // Income and existing debt are sensitive and must not be copied into the audit log.
+  'loan.apply': (body) => ({
+    principal: whole(body.principal),
+    tenureMonths: whole(body.tenureMonths),
+  }),
   'transaction.deposit': (body) => ({
     accountId: text(body.accountId, 64),
     amount: whole(body.amount),
