@@ -1,11 +1,11 @@
 # Keep native bcrypt dependencies on Linux; never copy the host's node_modules.
-FROM node:22-bookworm-slim AS dependencies
+FROM node:26-bookworm-slim AS dependencies
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
 # Build and typecheck the browser client separately. Only dist enters runtime.
-FROM node:22-bookworm-slim AS frontend
+FROM node:26-bookworm-slim AS frontend
 WORKDIR /web
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
@@ -17,7 +17,7 @@ COPY frontend/public ./public
 ENV VITE_API_BASE=/api/v1
 RUN npm run build
 
-FROM node:22-bookworm-slim AS runtime
+FROM node:26-bookworm-slim AS runtime
 ENV NODE_ENV=production PORT=3000 NPM_CONFIG_CACHE=/tmp/npm
 WORKDIR /app
 COPY --from=dependencies /app/node_modules ./node_modules
