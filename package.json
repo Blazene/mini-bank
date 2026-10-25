@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "test": "jest --runInBand",
+    "test": "jest --runInBand --coverage",
+    "test:coverage": "npm test",
     "lint": "eslint .",
     "make-admin": "node scripts/make-admin.js",
     "migrate": "node-pg-migrate -m db/migrations --envPath .env",

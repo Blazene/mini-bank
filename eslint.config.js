@@ -1,4 +1,6 @@
 module.exports = [
+  // Coverage reports contain generated third-party JavaScript, not application source.
+  { ignores: ['coverage/**'] },
   {
     files: ['**/*.js'],
     languageOptions: { ecmaVersion: 2022, sourceType: 'commonjs' },

@@ -30,6 +30,24 @@ test('refuses an unknown action when the route is set up, not on the first reque
   expect(() => audit('transaction.refund')).toThrow(/unknown audit action/i);
 });
 
+test('missing connection and optional resource information become null, not invented values', () => {
+  const req = { body: {}, params: {} };
+  const res = { on: jest.fn(), locals: {}, statusCode: 400 };
+  const next = jest.fn();
+  audit('loan.review', { resourceParam: 'id' })(req, res, next);
+  expect(next).toHaveBeenCalledTimes(1);
+  expect(service.record).not.toHaveBeenCalled();
+  res.on.mock.calls[0][1]();
+  expect(service.record).toHaveBeenCalledWith({
+    userId: null,
+    action: 'loan.review',
+    outcome: 'failure',
+    statusCode: 400,
+    ipAddress: null,
+    metadata: { decision: null, resourceId: null },
+  });
+});
+
 test('records one row after the response is sent', async () => {
   const app = appWith([audit('auth.login')], reply(200));
   await request(app).post('/x').send({ email: 'a@x.com', password: 'secret123' });

@@ -81,6 +81,15 @@ test('a concurrent insert with changed inputs is refused', async () => {
   });
 });
 
+test('fails rather than inventing a replay if a conflicting row cannot be read', async () => {
+  repository.insert.mockResolvedValue(null);
+  repository.findByKey.mockResolvedValue(null);
+  await expect(service.apply('user', input, 'key')).rejects.toThrow(
+    'Concurrent loan application could not be read'
+  );
+  expect(repository.findByKey).toHaveBeenCalledTimes(2);
+});
+
 test('reads applications through the ownership-scoped repository', async () => {
   repository.findForUser.mockResolvedValue(saved);
   expect(await service.get('owner', 'application')).toEqual(saved);

@@ -34,3 +34,11 @@ test('keeps validation details on a client error', () => {
 
   expect(body.error.details).toEqual(details);
 });
+
+test('a client error without a code still receives the machine-readable fallback', () => {
+  const error = Object.assign(new Error('Bad input'), { statusCode: 400 });
+  expect(run(error)).toEqual({
+    status: 400,
+    body: { error: { code: 'INTERNAL_ERROR', message: 'Bad input' } },
+  });
+});

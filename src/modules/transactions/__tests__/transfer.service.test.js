@@ -60,6 +60,17 @@ function expectNothingWritten() {
 }
 
 describe('transfer', () => {
+  test('refuses a destination that disappears between number lookup and row locking', async () => {
+    arrange(LOW_ID, HIGH_ID);
+    accountsRepository.lockById.mockResolvedValue(null);
+    await expect(service.transfer(USER_ID, input(LOW_ID))).rejects.toMatchObject({
+      statusCode: 404,
+      code: 'DESTINATION_NOT_FOUND',
+    });
+    expectNothingWritten();
+    expect(transactionsRepository.findByIdempotencyKey).not.toHaveBeenCalled();
+  });
+
   test('debits the source, credits the destination and records a transfer with the key', async () => {
     arrange(LOW_ID, HIGH_ID);
 
