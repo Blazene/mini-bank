@@ -1,5 +1,7 @@
 # Mini Digital Banking API
 
+[![CI](https://github.com/Blazene/mini-bank/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Blazene/mini-bank/actions/workflows/ci.yml)
+
 An educational Node.js / Express 5 / PostgreSQL banking API with atomic fund transfers,
 idempotent writes, transaction history, loan quotes and admin review, audit logging, and
 rule-based monitoring. **Not a production banking system; no real payment rails or loan
@@ -140,6 +142,27 @@ removes **only its own** resources. It does not reset or delete your normal deve
 database. The first run downloads the base image/dependencies. Standard `npm test` also
 checks Docker configuration but does not build images or require Docker CLI itself.
 
+### Continuous integration
+
+`.github/workflows/ci.yml` runs on pushes to `main`, pull requests, or a manual Actions run:
+
+1. **Tests, lint and coverage** — Ubuntu 24.04, Node 22, a health-checked PostgreSQL 16
+   service pre-created as `minibank_test`, `npm ci`, lint, migrations/full tests/coverage,
+   and `npm audit --audit-level=high`.
+2. **Docker stack verification** — after the first job passes, builds and tests the full
+   isolated stack with `npm run test:docker`, including persistence and production log privacy.
+
+Coverage reports are uploaded as a seven-day `coverage-node22` artifact, including after
+test failure when a report exists. The workflow uses read-only permissions and SHA-pinned
+official actions, needs no repository/production secrets, and does not publish or deploy.
+Weekly Dependabot checks cover npm, GitHub Actions pins and Docker base images; updates
+still require review and passing CI, not automatic merging.
+
+The badge reflects **hosted runs**, not local test results. The first run must be checked
+in the [Actions tab](https://github.com/Blazene/mini-bank/actions) after the workflow is
+pushed. Repository administrators may separately require both job checks in branch
+protection/rulesets; this configuration does not enable those settings automatically.
+
 Reports are generated locally under ignored `coverage/`. They include the operator script;
 its child-process smoke tests do not merge into Jest's in-process coverage figures. See
 [`docs/day-19.md`](docs/day-19.md) for the measurement scope and caveats. High coverage is
@@ -258,6 +281,7 @@ Money movements use one transaction/connection and lock account rows in fixed id
 - [`docs/day-19.md`](docs/day-19.md): coverage strategy and tests.
 - [`docs/verification-days-15-19.md`](docs/verification-days-15-19.md): verification findings and dependency fix.
 - [`docs/day-21.md`](docs/day-21.md): container design, isolated verification and log redaction.
+- [`docs/day-22.md`](docs/day-22.md): GitHub Actions jobs, supply-chain controls and verification scope.
 
 ## Security and remaining limitations
 
@@ -280,5 +304,5 @@ not make this a production-ready bank. Do not expose this demo to real customer 
   production logs. This is not a blanket guarantee that arbitrary future log messages
   cannot contain sensitive data.
 
-Next roadmap items: GitHub Actions, deployment,
+Next roadmap items: confirm hosted CI is green, deployment,
 production configuration review and final demonstration/polish. A frontend is optional.
