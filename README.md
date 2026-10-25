@@ -32,6 +32,8 @@ disbursement.** All money is represented as whole **paise**, never decimal rupee
   money movements, loan decisions and optional local admin/monitoring.
 - **[Architecture](docs/architecture.md)** — deployment/module diagrams, complete business
   schema overview and an atomic transfer sequence.
+- **[Project handbook](docs/project-handbook.md)** — decisions, limitations, trade-offs,
+  end-to-end flows and every maintained file's role and modification/deletion risks.
 - **[Security review](docs/security-review.md)** — verified controls, fixes, dependency PR
   review and limitations (not a security certification or production-bank claim).
 - **[Frontend guide](docs/frontend.md)** — customer screens, tests and same-service hosting.
