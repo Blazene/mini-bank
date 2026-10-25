@@ -2,14 +2,26 @@
 
 ## Status
 
-**Locally verified deployment configuration; live deployment pending.** No public API URL
-has been verified. Day 23 changes are not yet committed/pushed. The user selected Render
-Free for the API and Neon Free for PostgreSQL; no paid resource is approved. Both provider
-dashboards are signed in. An unrelated existing Neon project must not be reused or changed.
+**Deployed and live smoke checks passed on 25 October 2026.** Application commit `5eb216e`
+was pushed after authorization, and [both hosted CI jobs passed](https://github.com/Blazene/mini-bank/actions/runs/40191344929).
+
+- Base URL: **https://mini-bank-api-2bxt.onrender.com** (use `/api/v1`, not the root).
+- [Swagger UI](https://mini-bank-api-2bxt.onrender.com/api/v1/docs/),
+  [health](https://mini-bank-api-2bxt.onrender.com/api/v1/health),
+  [OpenAPI JSON](https://mini-bank-api-2bxt.onrender.com/api/v1/openapi.json).
+- Render: one **Free** Docker web service in Singapore, Blueprint `mini-bank`, `main`.
+- Neon: a new **Free** `mini-bank` project, AWS Singapore, PostgreSQL **16**, database
+  `minibank`. Existing unrelated project unchanged; optional Neon services left disabled.
+- The user entered the direct DB URL privately into Render. No real database password/URL
+  or JWT secret was printed in chat, committed, or installed in the local development `.env`.
+- The official Render GitHub app was authorized by the user for **only this repository**.
+  Its standard permissions include write access to Actions/workflows, checks/statuses,
+  deployments/environments, issues/PRs and hooks; this is not merely read-only code access.
+- No card, paid plan, Render database, disk or extra API instance was added.
 
 Day 22's hosted CI is confirmed green for `47949cc`:
 [both jobs passed](https://github.com/Blazene/mini-bank/actions/runs/40187980401).
-That result does not verify these new deployment changes.
+Day 23 has its own successful hosted run linked above.
 
 ## What changed
 
@@ -99,7 +111,7 @@ Authorization and Idempotency-Key; retry/rate-limit headers are exposed to the f
 Disallowed origins receive no CORS permission, not a server-side access denial. CORS does
 not stop non-browser clients or replace authentication, ownership checks or rate limits.
 
-## 4. Live smoke-check checklist (not yet executed)
+## 4. Live smoke-check checklist
 
 Use the actual assigned host, not an assumed `mini-bank-api.onrender.com` URL. Cold starts
 can take a minute; allow a generous timeout for the initial request.
@@ -156,7 +168,43 @@ Verified before publishing:
 
 Local PostgreSQL/Docker checks do **not** validate Neon certificate connectivity, public
 HTTPS, Render startup limits, GitHub authorization, provider quotas or cloud persistence.
-Complete and record the live checklist before marking Day 23 deployment complete.
+The separate hosted results below are the evidence for this deployment.
+
+## Hosted verification results
+
+- Render reports **Deploy succeeded / Live** for `5eb216e`. Startup logs show migrations
+  complete, Node running as **PID 1** on port **10000**, and the public service live.
+- Dashboard settings match the Blueprint: Singapore, Docker command
+  `/bin/sh scripts/start-render.sh`, health path `/api/v1/health`, no pre-deploy command,
+  **After CI Checks Pass**, and PR previews **Off**. No proxy/rate-limit warnings were seen
+  in the inspected startup logs.
+- Public HTTPS health returned **200**, `{"status":"ok","database":"up"}`. HTTP redirects
+  to HTTPS; HSTS is present. An arbitrary Origin received no CORS allow-origin header.
+- Public OpenAPI is **3.0.3**, with relative server `/api/v1`. The actual browser loaded
+  all Swagger JS/CSS assets and rendered **20 operations**. **Try it out → GET /health**
+  returned 200 against the same hosted HTTPS origin.
+- Disposable registration/login and authenticated `/auth/me` passed. Unauthenticated
+  account listing returned **401**; another user's read of the new account returned **404**.
+- Deposited **12345 paise** once, then replayed the same request/key: replay header was
+  `true`, balance remained **12345**, and history contained exactly **one** ledger row.
+- The README loan quote returned EMI **888488 paise**. A customer received **403** on
+  `/admin/alerts`. No cloud admin was granted, no real personal data or funds were used,
+  and generated test passwords/JWTs were not printed.
+- Render Events recorded two operator-requested service restarts (restarts do not create
+  new deployment entries). Subsequent startup logs say **No migrations to run**, migrations
+  complete, and Node PID 1 on port 10000. Post-restart health and a fresh login passed;
+  balance/one-row ledger persisted, and replaying the original deposit key still returned
+  the replay header without changing the balance. RateLimit/RateLimit-Policy headers were
+  present on protected API responses. The private temporary smoke-test credential file
+  used for the persistence check was deleted; no cloud DB credentials were stored locally.
+- The initial smoke probe's overly strict OpenAPI assertion expected only `{url: '/api/v1'}`,
+  but the valid spec also supplies a description. The probe was corrected to check the URL;
+  no application change was needed, and the corrected checks passed.
+
+Idle sleep/wake latency, sustained load, independent-client proxy-IP isolation and cloud
+admin workflows have not been tested. The documented free-tier cold-start behavior is a
+provider constraint, not a measured performance guarantee. Disposable test rows remain in
+the demo database; do not treat them as seed data or real customers.
 
 ## Free-tier and operational limits
 

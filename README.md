@@ -171,8 +171,11 @@ not proof of correctness or a security certification.
 
 ## Deploy a free demo: Render + Neon
 
-[`docs/day-23.md`](docs/day-23.md) is the deployment runbook. **The configuration is locally
-verified; a live deployment has not yet been verified or assigned a public URL.**
+**Live demo:** [Swagger UI](https://mini-bank-api-2bxt.onrender.com/api/v1/docs/) ·
+[health](https://mini-bank-api-2bxt.onrender.com/api/v1/health) ·
+[OpenAPI](https://mini-bank-api-2bxt.onrender.com/api/v1/openapi.json).
+Deployed and smoke-tested on 25 October 2026 from `5eb216e`.
+[`docs/day-23.md`](docs/day-23.md) records the setup, verification and free-tier limits.
 
 1. Push this configuration and confirm CI is green on the commit to deploy.
 2. Create a separate **Neon Free** PostgreSQL 16 project, preferably in AWS Singapore.
@@ -343,5 +346,4 @@ not make this a production-ready bank. Do not expose this demo to real customer 
   production logs. This is not a blanket guarantee that arbitrary future log messages
   cannot contain sensitive data.
 
-Next roadmap items: publish and verify the Day 23 deployment, then final configuration
-review and demonstration/polish. A frontend is optional.
+Next roadmap items: final configuration review and demonstration/polish. A frontend is optional.
