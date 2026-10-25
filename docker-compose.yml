@@ -1,3 +1,7 @@
+x-app-image: &app-image
+  image: ${APP_IMAGE:-mini-bank-api:local}
+  build: .
+
 services:
   db:
     image: postgres:16
@@ -6,9 +10,60 @@ services:
       POSTGRES_PASSWORD: bankpass
       POSTGRES_DB: minibank
     ports:
-      - '5432:5432'
+      - '127.0.0.1:${DB_PORT:-5432}:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U bank -d minibank']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+
+  # Opt-in: plain `docker compose up -d` remains the host-development DB workflow.
+  migrate:
+    <<: *app-image
+    profiles: ['app']
+    init: true
+    command: ['npm', 'run', 'migrate', '--', 'up']
+    environment:
+      DATABASE_URL: postgres://bank:bankpass@db:5432/minibank
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: 'no'
+    read_only: true
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=64m']
+    cap_drop: ['ALL']
+    security_opt: ['no-new-privileges:true']
+
+  api:
+    <<: *app-image
+    profiles: ['app']
+    init: true
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgres://bank:bankpass@db:5432/minibank
+      # No baked-in/default token secret. Zod rejects an empty or short value.
+      JWT_SECRET: ${JWT_SECRET:-}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+      TRUST_PROXY: ${TRUST_PROXY:-0}
+    ports:
+      - '127.0.0.1:${API_PORT:-3000}:3000'
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    stop_grace_period: 15s
+    read_only: true
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=64m']
+    cap_drop: ['ALL']
+    security_opt: ['no-new-privileges:true']
 
 volumes:
   pgdata:

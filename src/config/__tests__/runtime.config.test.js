@@ -44,5 +44,8 @@ test.each([
   jest.isolateModules(() => {
     require('../../shared/utils/logger');
   });
-  expect(pino).toHaveBeenCalledWith({ level });
+  expect(pino).toHaveBeenCalledWith({
+    level,
+    redact: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
+  });
 });

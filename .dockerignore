@@ -1,0 +1,15 @@
+# Allowlist only files needed by the runtime image. Secrets and host dependencies
+# must never enter the build context, even if they are present locally.
+**
+!Dockerfile
+!package.json
+!package-lock.json
+!src/
+!src/**
+src/**/__tests__/
+src/**/__tests__/**
+!scripts/
+!scripts/make-admin.js
+!db/
+!db/migrations/
+!db/migrations/*.sql

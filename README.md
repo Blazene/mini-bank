@@ -19,9 +19,11 @@ disbursement.** All money is represented as whole **paise**, never decimal rupee
 
 ## Run locally
 
-Use Node.js 22, npm, Docker with Compose, and PostgreSQL 16. The application currently
-runs on the host; Compose starts **PostgreSQL only**. An app Dockerfile and CI/deployment
-are still upcoming work.
+Choose either **Node on your host** or the **full Docker stack** below. Both use PostgreSQL
+16 and the same migrations. Docker Desktop (or Docker Engine with Compose) must be running.
+The API container uses Node.js 22; the host workflow needs Node.js 22 and npm installed.
+
+### Option A: Node on the host
 
 ```sh
 git clone https://github.com/Blazene/mini-bank.git
@@ -38,6 +40,56 @@ untracked. Generate a secret with `openssl rand -hex 32` and replace `JWT_SECRET
 npm run migrate -- up
 npm run dev
 ```
+
+Plain `docker compose up -d` still starts only PostgreSQL. The opt-in `app` profile below
+is not enabled, so this workflow does not unexpectedly occupy the API port.
+
+### Option B: full Docker stack
+
+Create `.env` from `.env.example` if missing and replace `JWT_SECRET` with a fresh
+`openssl rand -hex 32` value. No host `npm install` is needed for this option.
+
+```sh
+docker compose --profile app up --build -d --wait
+docker compose --profile app ps -a
+docker compose --profile app logs --tail=50 api migrate
+```
+
+Compose waits for PostgreSQL health, runs the one-off **migrate** job, then starts the
+API only if migration succeeds. The migration container exiting with code 0 is expected.
+The API runs non-root with a read-only filesystem, dropped capabilities and a bounded
+temporary filesystem. Native bcrypt dependencies are installed inside Linux, not copied
+from your Mac. Secrets, test code, `.git`, host dependencies and coverage reports are not
+included in the runtime image.
+
+Stop a host `npm run dev` before using Docker's default port 3000, or choose another port:
+
+```sh
+API_PORT=3001 docker compose --profile app up --build -d --wait
+```
+
+`API_PORT` changes the host-facing API port; the container always listens on 3000. Similarly,
+`DB_PORT` can change the host-facing database port, while containers use `db:5432` on their
+private Compose network. The host `.env` `DATABASE_URL` remains valid for host commands;
+Compose overrides it inside the API/migration containers with the service DNS URL.
+
+Both published ports bind to **127.0.0.1**, not every network interface. This is a local
+demo setup, not an Internet-ready deployment template. PostgreSQL's local demo credentials
+remain `bank` / `bankpass`; changing initialization variables does not rotate existing
+database credentials in a persisted volume.
+
+Useful container commands:
+
+```sh
+docker compose exec -T api npm run make-admin -- someone@example.com
+docker compose --profile app run --rm migrate
+docker compose --profile app down
+```
+
+`down` stops/removes containers and the network but **retains `pgdata`**. Do not add
+`--volumes` / `-v` to your normal project unless you deliberately intend to delete its
+database. Do not start host and container instances against this database simultaneously
+when relying on single-process rate limits.
 
 Default API: **http://localhost:3000/api/v1**
 
@@ -74,6 +126,19 @@ npm run test:coverage       # alias for npm test, including migrations
 open coverage/index.html   # macOS; elsewhere open this HTML file in your browser
 npm audit
 ```
+
+For the separate, opt-in Docker verification (requires a running Docker daemon):
+
+```sh
+npm ci
+npm run test:docker
+```
+
+It builds a unique image, uses random localhost ports and an isolated Compose project/
+database volume, verifies API behavior and persistence across container recreation, then
+removes **only its own** resources. It does not reset or delete your normal development
+database. The first run downloads the base image/dependencies. Standard `npm test` also
+checks Docker configuration but does not build images or require Docker CLI itself.
 
 Reports are generated locally under ignored `coverage/`. They include the operator script;
 its child-process smoke tests do not merge into Jest's in-process coverage figures. See
@@ -166,6 +231,11 @@ balances and ledger writes commit atomically: monitoring failure rolls back the 
 | `TRUST_PROXY`        | Number of trusted proxy hops, default 0; configure for the actual deployment topology |
 | `NODE_ENV`           | `development`, `test` or `production`; test selects `.env.test`                       |
 
+Compose-only optional settings: `API_PORT` (default 3000), `DB_PORT` (default 5432), and
+`APP_IMAGE` (default `mini-bank-api:local`). Container `NODE_ENV` is always `production`;
+its JWT/work-factor/rate-limit/proxy settings are passed explicitly from the environment
+or `.env`. A missing/short JWT secret fails application startup; there is no image default.
+
 Make an **existing** user an admin using server/operator access:
 
 ```sh
@@ -187,6 +257,7 @@ Money movements use one transaction/connection and lock account rows in fixed id
 - [`docs/day-18.md`](docs/day-18.md): monitoring rules, atomicity and limitations.
 - [`docs/day-19.md`](docs/day-19.md): coverage strategy and tests.
 - [`docs/verification-days-15-19.md`](docs/verification-days-15-19.md): verification findings and dependency fix.
+- [`docs/day-21.md`](docs/day-21.md): container design, isolated verification and log redaction.
 
 ## Security and remaining limitations
 
@@ -205,6 +276,9 @@ not make this a production-ready bank. Do not expose this demo to real customer 
 - Swagger describes the contract but does not replace runtime validation. Tests include
   schema checks against every business operation's actual PostgreSQL-backed response.
 - Dependency audits are point-in-time checks, not guarantees against unknown vulnerabilities.
+- HTTP Authorization/Cookie headers and response Set-Cookie values are redacted from
+  production logs. This is not a blanket guarantee that arbitrary future log messages
+  cannot contain sensitive data.
 
-Next roadmap items: app Dockerfile/Compose integration, GitHub Actions, deployment,
+Next roadmap items: GitHub Actions, deployment,
 production configuration review and final demonstration/polish. A frontend is optional.
