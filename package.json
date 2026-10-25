@@ -9,6 +9,7 @@
     "test": "jest --runInBand --coverage",
     "test:coverage": "npm test",
     "test:docker": "node tests/docker/verify.js",
+    "verify:demo": "node scripts/verify-demo.js",
     "lint": "eslint .",
     "make-admin": "node scripts/make-admin.js",
     "migrate": "node-pg-migrate -m db/migrations --envPath .env",

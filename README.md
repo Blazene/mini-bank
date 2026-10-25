@@ -19,6 +19,28 @@ disbursement.** All money is represented as whole **paise**, never decimal rupee
 - Automated unit, PostgreSQL integration, concurrency, live HTTP and OpenAPI contract tests.
 - A 95% global coverage gate on statements, branches, functions and lines.
 
+## Explore the portfolio demo
+
+- **[Live Swagger UI](https://mini-bank-api-2bxt.onrender.com/api/v1/docs/)** — the current
+  interface; no customer-facing frontend yet. Free hosting can take about a minute to wake.
+- **[Five-minute demo walkthrough](docs/demo.md)** — auth, account isolation, retry-safe
+  money movements, loan decisions and optional local admin/monitoring.
+- **[Architecture](docs/architecture.md)** — deployment/module diagrams, complete business
+  schema overview and an atomic transfer sequence.
+- **[Security review](docs/security-review.md)** — verified controls, fixes, dependency PR
+  review and limitations (not a security certification or production-bank claim).
+- **[Frontend handoff](docs/frontend-handoff.md)** — API/client invariants for the next phase.
+
+Read-only verification of the live API (Node.js 22, no private configuration needed):
+
+```sh
+npm run verify:demo -- --base-url https://mini-bank-api-2bxt.onrender.com
+```
+
+An optional local writable walkthrough uses `--write`; remote writes additionally require
+`--allow-remote-writes`. They create disposable fake data and leave rows in place. See the
+walkthrough before running them; the default command does not create business rows.
+
 ## Run locally
 
 Choose either **Node on your host** or the **full Docker stack** below. Both use PostgreSQL
@@ -35,7 +57,8 @@ docker compose up -d
 ```
 
 Create `.env` from `.env.example` **only if you do not already have one**. Keep `.env`
-untracked. Generate a secret with `openssl rand -hex 32` and replace `JWT_SECRET` in
+and private `.env.*` variants untracked (only nonsecret example/test files are exceptions).
+Generate a secret with `openssl rand -hex 32` and replace `JWT_SECRET` in
 `.env` with that output before starting the API. Do not use the placeholder in production.
 
 ```sh
@@ -174,7 +197,9 @@ not proof of correctness or a security certification.
 **Live demo:** [Swagger UI](https://mini-bank-api-2bxt.onrender.com/api/v1/docs/) ·
 [health](https://mini-bank-api-2bxt.onrender.com/api/v1/health) ·
 [OpenAPI](https://mini-bank-api-2bxt.onrender.com/api/v1/openapi.json).
-Deployed and smoke-tested on 25 October 2026 from `5eb216e`.
+First deployed and smoke-tested on 25 October 2026 from `5eb216e`; the documentation
+follow-up `62f4f35` also passed [hosted CI](https://github.com/Blazene/mini-bank/actions/runs/40193207093)
+and auto-deployed successfully. Day 24's local review is not a newly published deployment.
 [`docs/day-23.md`](docs/day-23.md) records the setup, verification and free-tier limits.
 
 1. Push this configuration and confirm CI is green on the commit to deploy.
@@ -193,6 +218,8 @@ Render runs `/bin/sh scripts/start-render.sh`: validate environment/direct Neon 
 apply migrations, then `exec node src/server.js`. A validation or migration failure
 prevents HTTP startup. The normal Docker/Compose start path is unchanged. Automatic
 deploys use `checksPass`; GitHub must be connected with access to CI check results.
+The locally hardened bootstrap also rejects duplicate Neon TLS modes, query-host overrides
+and global TLS bypasses; publish Day 24 before assuming those new checks run on Render.
 
 Production defaults to **no cross-origin browser permission**; same-origin Swagger and
 non-browser API clients still work. Set `CORS_ORIGINS` in Render only for specific frontend
@@ -322,6 +349,7 @@ Money movements use one transaction/connection and lock account rows in fixed id
 - [`docs/day-21.md`](docs/day-21.md): container design, isolated verification and log redaction.
 - [`docs/day-22.md`](docs/day-22.md): GitHub Actions jobs, supply-chain controls and verification scope.
 - [`docs/day-23.md`](docs/day-23.md): free Render/Neon deployment, private configuration and live verification checklist.
+- [`docs/day-24.md`](docs/day-24.md): final backend review, reproducible demo, verification and frontend handoff.
 
 ## Security and remaining limitations
 
@@ -346,4 +374,5 @@ not make this a production-ready bank. Do not expose this demo to real customer 
   production logs. This is not a blanket guarantee that arbitrary future log messages
   cannot contain sensitive data.
 
-Next roadmap items: final configuration review and demonstration/polish. A frontend is optional.
+Next phase: build the frontend using the [handoff](docs/frontend-handoff.md), after the
+Day 24 changes are reviewed/published. No frontend implementation is included in Day 24.

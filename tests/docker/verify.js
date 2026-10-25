@@ -250,6 +250,7 @@ async function verify() {
   assert.deepEqual((await call('GET', '/health')).body, { status: 'ok', database: 'up' });
   assert.equal((await fetch(`${base}/api/v1/docs/`)).status, 200);
   assert.equal((await call('GET', '/openapi.json')).body.openapi, '3.0.3');
+  await require('../../scripts/verify-demo').verify({ base });
 
   console.log(
     'Checking real container auth, money, loans, admin command, monitoring and log privacy.'

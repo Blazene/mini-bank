@@ -82,6 +82,39 @@ test.each([
     },
     /direct Neon connection/,
   ],
+  [
+    'duplicate TLS mode',
+    {
+      DATABASE_URL:
+        'postgres://fake:private-db-password@ep-demo.neon.tech/demo?sslmode=verify-full&sslmode=no-verify',
+    },
+    /exactly one sslmode=verify-full/,
+  ],
+  [
+    'query host override',
+    {
+      DATABASE_URL:
+        'postgres://fake:private-db-password@localhost/demo?host=ep-demo-pooler.neon.tech&sslmode=verify-full',
+    },
+    /host query override/,
+  ],
+  [
+    'uppercase pooled host',
+    {
+      DATABASE_URL:
+        'postgres://fake:private-db-password@EP-DEMO-POOLER.NEON.TECH./demo?sslmode=verify-full',
+    },
+    /direct Neon connection/,
+  ],
+  [
+    'encoded pooled host',
+    {
+      DATABASE_URL:
+        'postgres://fake:private-db-password@ep-demo-pooler.neon%2etech/demo?sslmode=verify-full',
+    },
+    /direct Neon connection/,
+  ],
+  ['global TLS bypass', { NODE_TLS_REJECT_UNAUTHORIZED: '0' }, /Do not disable TLS/],
   ...['require', 'disable', 'no-verify', ''].map((mode) => [
     `TLS ${mode || 'missing'}`,
     {
@@ -102,4 +135,11 @@ test.each([
 
 test('a local direct PostgreSQL URL supports isolated non-cloud container verification', () => {
   expect(start({ DATABASE_URL: 'postgres://fake:fake@db/demo' }).status).toBe(0);
+});
+
+test('normalizes case and a trailing DNS dot when validating a direct Neon host', () => {
+  expect(
+    start({ DATABASE_URL: 'postgres://fake:fake@EP-DEMO.NEON.TECH./demo?sslmode=verify-full' })
+      .status
+  ).toBe(0);
 });
