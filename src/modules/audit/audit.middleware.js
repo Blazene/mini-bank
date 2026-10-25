@@ -8,11 +8,17 @@ const { REQUEST_ACTIONS, pickMetadata } = require('./audit.actions');
 // validation error, wrong password, rate limit. Put it BEFORE the limiters and validation on a
 // route, so that requests those stop are logged too. Put it AFTER requireAuth where the
 // caller must be logged in, so the row can name them.
-function audit(action) {
+function audit(action, { resourceParam } = {}) {
   // Fail when the server starts, not on the first request, if a route names an unknown action.
   if (!REQUEST_ACTIONS[action]) throw new Error(`Unknown audit action: ${action}`);
 
   return (req, res, next) => {
+    // Capture while still inside the matching router. Express restores req.params
+    // when an error unwinds the router, before the finish event is emitted.
+    const resourceId =
+      resourceParam && typeof req.params[resourceParam] === 'string'
+        ? req.params[resourceParam].slice(0, 64)
+        : null;
     res.on('finish', () => {
       try {
         service.record({
@@ -23,7 +29,11 @@ function audit(action) {
           outcome: res.statusCode < 400 ? 'success' : 'failure',
           statusCode: res.statusCode,
           ipAddress: req.ip || null,
-          metadata: pickMetadata(action, req.body),
+          metadata: {
+            ...pickMetadata(action, req.body),
+            // An optional bounded path identifier, never the query or full URL.
+            ...(resourceParam && { resourceId }),
+          },
         });
       } catch (err) {
         // An event handler that throws would crash the process. Never let logging do that.

@@ -4,6 +4,7 @@ test('lists every action an admin can filter by, including the one written by th
   expect(ACTION_NAMES).toEqual([
     'auth.register',
     'auth.login',
+    'loan.review',
     'loan.apply',
     'transaction.deposit',
     'transaction.withdraw',
@@ -13,6 +14,19 @@ test('lists every action an admin can filter by, including the one written by th
 });
 
 describe('what is kept from a request', () => {
+  test('review metadata excludes the narrative reason and income', () => {
+    expect(
+      pickMetadata('loan.review', {
+        decision: 'approved',
+        reason: 'Private notes',
+        monthlyIncome: 5000000,
+      })
+    ).toEqual({ decision: 'approved' });
+    expect(pickMetadata('loan.review', { decision: { unexpected: true } })).toEqual({
+      decision: null,
+    });
+    expect(pickMetadata('loan.review', { decision: 'a'.repeat(100) }).decision).toHaveLength(16);
+  });
   test('loan applications exclude declared income, debt and client-provided terms', () => {
     expect(
       pickMetadata('loan.apply', {

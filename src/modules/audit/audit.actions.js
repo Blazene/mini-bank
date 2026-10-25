@@ -14,6 +14,8 @@ const asObject = (body) =>
 const REQUEST_ACTIONS = {
   'auth.register': (body) => ({ email: text(body.email) }),
   'auth.login': (body) => ({ email: text(body.email) }),
+  // Reasons may contain sensitive narrative. Keep only the requested decision.
+  'loan.review': (body) => ({ decision: text(body.decision, 16) }),
   // Income and existing debt are sensitive and must not be copied into the audit log.
   'loan.apply': (body) => ({
     principal: whole(body.principal),

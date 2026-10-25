@@ -10,4 +10,18 @@ const quoteSchema = z.object({
 
 const applicationIdSchema = z.object({ id: z.uuid('Application id must be a valid UUID') });
 
-module.exports = { quoteSchema, applicationIdSchema };
+const reviewSchema = z.object({
+  decision: z.enum(['approved', 'rejected']),
+  // Customer-visible explanation, not private underwriting notes.
+  reason: z
+    .string()
+    .trim()
+    // PostgreSQL char_length counts Unicode code points, not UTF-16 code units.
+    .refine(
+      (text) => [...text].length >= 10 && [...text].length <= 500,
+      'Reason must contain 10 to 500 characters'
+    )
+    .refine((text) => !/[\u0000\uD800-\uDFFF]/u.test(text), 'Reason contains unsupported text'),
+});
+
+module.exports = { quoteSchema, applicationIdSchema, reviewSchema };
