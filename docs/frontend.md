@@ -5,9 +5,12 @@ The user chose **modern banking**: navy navigation, a warm light workspace, rest
 teal accents, self-hosted Inter/DM Serif fonts and responsive account cards/forms.
 No external analytics, font CDN, paid service or new cloud resource is required.
 
-**Status: implemented/tested locally with same-service Docker hosting; public rollout verification pending.**
-Deployment target: [sign-in](https://mini-bank-api-2bxt.onrender.com/login) and
+**Status: publicly deployed on the existing Render service as `bf4e142`.**
+Open [the website](https://mini-bank-api-2bxt.onrender.com/),
+[sign-in](https://mini-bank-api-2bxt.onrender.com/login) or
 [sample-data preview](https://mini-bank-api-2bxt.onrender.com/demo/overview), alongside the existing API.
+[All three hosted CI jobs passed](https://github.com/Blazene/mini-bank/actions/runs/40202387787).
+See [public browser verification and its scope](frontend-deployment.md).
 Day 24 is separately published as `1302383` with green CI and a successful Render deploy.
 
 ## Run
@@ -83,17 +86,17 @@ auth/cookie boundaries, errors/429, write-intent retention and preview isolation
 
 Verified locally on Node **22.23.3**:
 
-| Check                                   | Result                                                                                           |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Frontend unit/component                 | **43 tests, 4 files passed**                                                                     |
-| Chromium desktop + mobile               | **22 checks passed**, including Axe on sign-in and every customer preview view                   |
-| TypeScript + production bundle          | Passed                                                                                           |
-| Backend regression after static serving | **1034 tests, 73 suites passed**, existing four 95% coverage gates retained                      |
-| Static serving and build configuration  | **37 focused tests passed**, plus full post-integration regression                               |
-| Backend lint and isolated Docker        | Passed; runtime includes compiled assets only, with website/deep-link/API isolation checks       |
-| Backend and frontend dependency audits  | Both reported **zero known vulnerabilities**                                                     |
-| Updated workflow validation             | Official checksum-verified actionlint passed (optional ShellCheck/Pyflakes integration disabled) |
-| Existing hosted API read-only check     | Passed after Day 24 deployment; no hosted business rows created in frontend work                 |
+| Check                                   | Result                                                                                                                                           |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Frontend unit/component                 | **43 tests, 4 files passed**                                                                                                                     |
+| Chromium desktop + mobile               | **22 checks passed**, including Axe on sign-in and every customer preview view                                                                   |
+| TypeScript + production bundle          | Passed                                                                                                                                           |
+| Backend regression after static serving | **1034 tests, 73 suites passed**, existing four 95% coverage gates retained                                                                      |
+| Static serving and build configuration  | **37 focused tests passed**, plus full post-integration regression                                                                               |
+| Backend lint and isolated Docker        | Passed; runtime includes compiled assets only, with website/deep-link/API isolation checks                                                       |
+| Backend and frontend dependency audits  | Both reported **zero known vulnerabilities**                                                                                                     |
+| Updated workflow validation             | Official checksum-verified actionlint passed (optional ShellCheck/Pyflakes integration disabled)                                                 |
+| Public website/API checks               | Render Live; public read-only browser/API checks and bounded disposable business flows verified; see [deployment report](frontend-deployment.md) |
 
 Browser checks caught and corrected pale-text contrast, native-dialog focus return and
 mobile transaction readability. These are real fixes, not disabled Axe rules. Local

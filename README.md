@@ -22,9 +22,10 @@ disbursement.** All money is represented as whole **paise**, never decimal rupee
 
 ## Explore the portfolio demo
 
-- **Website deployment target:** [customer sign-in](https://mini-bank-api-2bxt.onrender.com/login) ·
-  [no-network design preview](https://mini-bank-api-2bxt.onrender.com/demo/overview).
-  The frontend is bundled into the existing Render service; public rollout verification is pending.
+- **[Live website](https://mini-bank-api-2bxt.onrender.com/)** ·
+  [customer sign-in](https://mini-bank-api-2bxt.onrender.com/login) ·
+  [sample-data preview](https://mini-bank-api-2bxt.onrender.com/demo/overview).
+  The frontend and API share the existing Render service and URL.
 - **[Live Swagger UI](https://mini-bank-api-2bxt.onrender.com/api/v1/docs/)** — the API
   remains under `/api/v1`. The website and API share Render Free sleep/cold starts.
 - **[Five-minute demo walkthrough](docs/demo.md)** — auth, account isolation, retry-safe
@@ -34,6 +35,7 @@ disbursement.** All money is represented as whole **paise**, never decimal rupee
 - **[Security review](docs/security-review.md)** — verified controls, fixes, dependency PR
   review and limitations (not a security certification or production-bank claim).
 - **[Frontend guide](docs/frontend.md)** — customer screens, tests and same-service hosting.
+- **[Public website verification](docs/frontend-deployment.md)** — deployed commit, CI and live browser results.
 - **[Frontend handoff](docs/frontend-handoff.md)** — retained API/client invariants.
 
 Read-only verification of the live API (Node.js 22, no private configuration needed):
@@ -241,6 +243,9 @@ and auto-deployed successfully. Day 24 was then published as `1302383`, with
 [`docs/day-23.md`](docs/day-23.md) records the setup, verification and free-tier limits.
 The frontend now uses that **same service and URL**. No additional static site, database,
 custom domain or paid plan is required. See [frontend hosting](docs/frontend.md#same-service-production-hosting).
+Frontend commit **`bf4e142`** passed [all three hosted CI jobs](https://github.com/Blazene/mini-bank/actions/runs/40202387787),
+auto-deployed successfully, and was checked in a real browser against the public service.
+See the [deployment report](docs/frontend-deployment.md) for verification scope and disposable test data.
 
 1. Push this configuration and confirm CI is green on the commit to deploy.
 2. Create a separate **Neon Free** PostgreSQL 16 project, preferably in AWS Singapore.

@@ -3,6 +3,10 @@
 React + TypeScript + Vite. See [`../docs/frontend.md`](../docs/frontend.md) for scope,
 security boundaries, testing and same-service deployment details.
 
+**Public website:** https://mini-bank-api-2bxt.onrender.com/ ·
+[sample-data preview](https://mini-bank-api-2bxt.onrender.com/demo/overview).
+See [deployment verification](../docs/frontend-deployment.md).
+
 ```sh
 npm ci
 npm run dev

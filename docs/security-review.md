@@ -68,8 +68,10 @@ unlisted-origin CORS, OpenAPI/same-origin server, Swagger HTML and 401 guards. I
 no users/accounts/money/applications. Existing request/audit logs are normal server effects.
 
 The Day 24 deployment `1302383` has [both CI jobs green](https://github.com/Blazene/mini-bank/actions/runs/40195821465).
-See [Day 24](day-24.md) for its local results. The new frontend is a later, initially local
-change and must obtain its own CI result when published. No load flood, cloud admin grant, secret rotation, database reset,
+See [Day 24](day-24.md) for its local results. The later frontend deployment `bf4e142`
+passed [all three CI jobs](https://github.com/Blazene/mini-bank/actions/runs/40202387787);
+[its deployment report](frontend-deployment.md) separately records public website checks
+and bounded disposable writes. No load flood, cloud admin grant, secret rotation, database reset,
 plan upgrade, security-setting mutation or production restart was performed in Day 24.
 
 ## Dependabot review — no merges
