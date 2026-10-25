@@ -2,9 +2,9 @@
 
 [![CI](https://github.com/Blazene/mini-bank/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Blazene/mini-bank/actions/workflows/ci.yml)
 
-An educational Node.js / Express 5 / PostgreSQL banking API with atomic fund transfers,
-idempotent writes, transaction history, loan quotes and admin review, audit logging, and
-rule-based monitoring. **Not a production banking system; no real payment rails or loan
+An educational banking workspace with a React/TypeScript frontend and a Node.js / Express 5 /
+PostgreSQL API: atomic fund transfers, idempotent writes, transaction history, loan quotes
+and admin review, audit logging, and rule-based monitoring. **Not a production banking system; no real payment rails or loan
 disbursement.** All money is represented as whole **paise**, never decimal rupees.
 
 ## Features
@@ -17,19 +17,24 @@ disbursement.** All money is represented as whole **paise**, never decimal rupee
 - Append-only request audit logs and an operator-only admin-grant command.
 - Transactional large-movement and rapid-transfer alerts, readable only by admins.
 - Automated unit, PostgreSQL integration, concurrency, live HTTP and OpenAPI contract tests.
-- A 95% global coverage gate on statements, branches, functions and lines.
+- A 95% global backend/JavaScript-script coverage gate on statements, branches, functions and lines.
+  The frontend has a separate test suite and does not count toward that percentage.
 
 ## Explore the portfolio demo
 
-- **[Live Swagger UI](https://mini-bank-api-2bxt.onrender.com/api/v1/docs/)** — the current
-  interface; no customer-facing frontend yet. Free hosting can take about a minute to wake.
+- **Website deployment target:** [customer sign-in](https://mini-bank-api-2bxt.onrender.com/login) ·
+  [no-network design preview](https://mini-bank-api-2bxt.onrender.com/demo/overview).
+  The frontend is bundled into the existing Render service; public rollout verification is pending.
+- **[Live Swagger UI](https://mini-bank-api-2bxt.onrender.com/api/v1/docs/)** — the API
+  remains under `/api/v1`. The website and API share Render Free sleep/cold starts.
 - **[Five-minute demo walkthrough](docs/demo.md)** — auth, account isolation, retry-safe
   money movements, loan decisions and optional local admin/monitoring.
 - **[Architecture](docs/architecture.md)** — deployment/module diagrams, complete business
   schema overview and an atomic transfer sequence.
 - **[Security review](docs/security-review.md)** — verified controls, fixes, dependency PR
   review and limitations (not a security certification or production-bank claim).
-- **[Frontend handoff](docs/frontend-handoff.md)** — API/client invariants for the next phase.
+- **[Frontend guide](docs/frontend.md)** — customer screens, tests and same-service hosting.
+- **[Frontend handoff](docs/frontend-handoff.md)** — retained API/client invariants.
 
 Read-only verification of the live API (Node.js 22, no private configuration needed):
 
@@ -40,6 +45,31 @@ npm run verify:demo -- --base-url https://mini-bank-api-2bxt.onrender.com
 An optional local writable walkthrough uses `--write`; remote writes additionally require
 `--allow-remote-writes`. They create disposable fake data and leave rows in place. See the
 walkthrough before running them; the default command does not create business rows.
+
+## Run the frontend
+
+Node.js **22.22.2+** is required (verified on 22.23.3). The React/TypeScript/Vite client
+has its own dependencies and lockfile. Docker builds it separately and copies only compiled
+assets into the runtime image, not frontend source or build dependencies.
+
+```sh
+npm --prefix frontend ci
+npm run dev:web
+```
+
+- **Design preview:** http://127.0.0.1:5173/demo/overview — clearly labeled sample data,
+  no API calls or financial writes. Desktop and mobile layouts are supported.
+- **Sign in / register:** http://127.0.0.1:5173/login — real API-backed customer flows.
+  The dev server defaults to proxying the hosted API. Use **disposable information only**;
+  live-mode changes persist on the demo backend.
+- To use your local API instead: `API_PROXY_TARGET=http://127.0.0.1:3000 npm run dev:web`.
+  Start the local API separately using the backend instructions below.
+
+Features include accounts, reviewed money forms, retry-safe writes, activity/filtering/
+pagination, and loan quote/application detail workflows. Tokens remain in memory; reload
+means sign in again. There is no fake analytics, recipient-name lookup or public admin setup.
+See [`docs/frontend.md`](docs/frontend.md) for tests, boundaries and deployment details.
+The full Docker stack also serves the compiled website at `http://localhost:3000/`.
 
 ## Run locally
 
@@ -174,6 +204,13 @@ checks Docker configuration but does not build images or require Docker CLI itse
    and `npm audit --audit-level=high`.
 2. **Docker stack verification** — after the first job passes, builds and tests the full
    isolated stack with `npm run test:docker`, including persistence and production log privacy.
+3. **Frontend tests, build and browser checks** — independent job, frontend lockfile install,
+   unit/component tests, strict TypeScript/production build, dependency audit and Chromium
+   desktop/mobile/accessibility checks. Browser tests intercept API calls with test fixtures;
+   they never write to the hosted database. Failure traces are retained for seven days.
+
+Backend and frontend tests remain separate runners. Check all three jobs for the commit
+being deployed; local success does not replace a hosted CI run.
 
 Coverage reports are uploaded as a seven-day `coverage-node22` artifact, including after
 test failure when a report exists. The workflow uses read-only permissions and SHA-pinned
@@ -184,7 +221,7 @@ still require review and passing CI, not automatic merging.
 The badge reflects **hosted runs**, not local test results. Both jobs passed for Day 22
 commit `47949cc` ([hosted run](https://github.com/Blazene/mini-bank/actions/runs/40187980401));
 check each later commit in the [Actions tab](https://github.com/Blazene/mini-bank/actions).
-Repository administrators may separately require both job checks in branch
+Repository administrators may separately require all three job checks in branch
 protection/rulesets; this configuration does not enable those settings automatically.
 
 Reports are generated locally under ignored `coverage/`. They include the operator script;
@@ -194,13 +231,16 @@ not proof of correctness or a security certification.
 
 ## Deploy a free demo: Render + Neon
 
-**Live demo:** [Swagger UI](https://mini-bank-api-2bxt.onrender.com/api/v1/docs/) ·
+**Existing public service:** [Swagger UI](https://mini-bank-api-2bxt.onrender.com/api/v1/docs/) ·
 [health](https://mini-bank-api-2bxt.onrender.com/api/v1/health) ·
 [OpenAPI](https://mini-bank-api-2bxt.onrender.com/api/v1/openapi.json).
 First deployed and smoke-tested on 25 October 2026 from `5eb216e`; the documentation
 follow-up `62f4f35` also passed [hosted CI](https://github.com/Blazene/mini-bank/actions/runs/40193207093)
-and auto-deployed successfully. Day 24's local review is not a newly published deployment.
+and auto-deployed successfully. Day 24 was then published as `1302383`, with
+[green CI](https://github.com/Blazene/mini-bank/actions/runs/40195821465) and a successful auto-deploy.
 [`docs/day-23.md`](docs/day-23.md) records the setup, verification and free-tier limits.
+The frontend now uses that **same service and URL**. No additional static site, database,
+custom domain or paid plan is required. See [frontend hosting](docs/frontend.md#same-service-production-hosting).
 
 1. Push this configuration and confirm CI is green on the commit to deploy.
 2. Create a separate **Neon Free** PostgreSQL 16 project, preferably in AWS Singapore.
@@ -211,20 +251,21 @@ and auto-deployed successfully. Day 24's local review is not a newly published d
    Confirm **Free**, Singapore and one API instance; paste the URL directly into the
    prompted `DATABASE_URL` secret. Render generates `JWT_SECRET`. Do not add a Render
    database, paid disk, extra instance, card or plan upgrade for this demo.
-5. After a successful deploy, verify HTTPS `/api/v1/health`, `/api/v1/docs/` and the
-   disposable auth/account/money checks in the runbook. Keep tokens and credentials private.
+5. After a successful deploy, verify HTTPS `/`, `/login`, `/demo/overview`, deep-link reloads,
+   `/api/v1/health`, `/api/v1/docs/` and the disposable auth/account/money checks in the runbook.
+   Keep tokens and credentials private.
 
 Render runs `/bin/sh scripts/start-render.sh`: validate environment/direct Neon TLS,
 apply migrations, then `exec node src/server.js`. A validation or migration failure
 prevents HTTP startup. The normal Docker/Compose start path is unchanged. Automatic
 deploys use `checksPass`; GitHub must be connected with access to CI check results.
-The locally hardened bootstrap also rejects duplicate Neon TLS modes, query-host overrides
-and global TLS bypasses; publish Day 24 before assuming those new checks run on Render.
+The hardened bootstrap also rejects duplicate Neon TLS modes, query-host overrides
+and global TLS bypasses; those checks shipped with Day 24.
 
-Production defaults to **no cross-origin browser permission**; same-origin Swagger and
-non-browser API clients still work. Set `CORS_ORIGINS` in Render only for specific frontend
-origins, for example `https://frontend.example` (no trailing slash or wildcard). CORS is
-not authentication or a firewall. `TRUST_PROXY=1` assumes Render's single trusted proxy;
+Production keeps **no cross-origin browser permission**. The bundled frontend uses
+`VITE_API_BASE=/api/v1`; same-origin website/Swagger and non-browser API clients work without
+a CORS allowlist. Leave `CORS_ORIGINS` unset for this deployment. CORS is not authentication
+or a firewall. `TRUST_PROXY=1` assumes Render's single trusted proxy;
 recheck that assumption if adding another proxy/CDN.
 
 Free services have quotas and cold starts: Render sleeps after 15 idle minutes, and Neon
@@ -374,5 +415,5 @@ not make this a production-ready bank. Do not expose this demo to real customer 
   production logs. This is not a blanket guarantee that arbitrary future log messages
   cannot contain sensitive data.
 
-Next phase: build the frontend using the [handoff](docs/frontend-handoff.md), after the
-Day 24 changes are reviewed/published. No frontend implementation is included in Day 24.
+Admin screens remain a separate later phase. The frontend was started after Day 24 and
+ships as a later, same-service deployment rather than a separate static host.

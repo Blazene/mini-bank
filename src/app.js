@@ -24,6 +24,7 @@ app.use(express.json({ limit: '10kb' }));
 app.use(pinoHttp({ logger }));
 
 app.use('/api/v1', require('./modules'));
+require('./shared/middleware/frontend')(app);
 
 app.use(notFound);
 app.use(errorHandler);

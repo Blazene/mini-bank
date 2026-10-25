@@ -1,5 +1,7 @@
 module.exports = {
   testEnvironment: 'node',
+  // The TypeScript browser client has an isolated Vitest/DOM test suite.
+  testPathIgnorePatterns: ['/node_modules/', '/frontend/'],
   coverageProvider: 'babel',
   collectCoverageFrom: [
     'src/**/*.js',

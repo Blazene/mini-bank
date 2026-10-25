@@ -5,8 +5,9 @@
 The backend has a documented demo, accurate architecture overview, point-in-time security
 review, repeatable safe HTTP checker and frontend handoff. No frontend code, new paid
 resource, database migration, dependency upgrade, cloud admin grant or PR merge is included.
-**Day 24 changes remain local/uncommitted until publishing is requested.** The existing
-deployment still runs `62f4f35`, not the new startup guardrails described here.
+Published as **`1302383`** after authorization. [Both hosted CI jobs passed](https://github.com/Blazene/mini-bank/actions/runs/40195821465),
+and Render successfully auto-deployed the hardened bootstrap. Subsequent frontend work
+is a separate change, not part of that Day 24 run.
 
 ## Deliverables
 
@@ -80,9 +81,10 @@ error-output privacy. HTTP requests can still produce ordinary audit/access logs
 The hosted read-only run passed against the existing service without creating users,
 accounts, money or loan applications. Authenticated Render settings were reviewed without
 revealing private values: Free/Singapore, CI-gated auto-deploy, expected Docker bootstrap/
-health path and previews off. Existing `62f4f35` has
-[both hosted CI jobs green](https://github.com/Blazene/mini-bank/actions/runs/40193207093).
-That run does **not** verify these new unpushed changes.
+health path and previews off. Publication follow-up: `1302383` passed
+[both hosted CI jobs](https://github.com/Blazene/mini-bank/actions/runs/40195821465),
+Render auto-deployed it, and public read-only verification passed again. That result does
+not claim a hosted run for the subsequent, initially unpushed frontend implementation.
 
 ## Dependency decisions
 
@@ -100,9 +102,9 @@ Free-tier cold starts/quotas, shared limiter storage, independent-client proxy v
 cloud admin workflows, measured load, backup restoration, durable audits and real banking
 requirements remain out of scope. They are documented limitations, not silently passed tests.
 
-Day 24 implementation and verification are complete locally. Publishing requires an explicit
-commit/push request, green CI for that exact commit, Render's successful auto-deploy, and
-another public read-only check. No paid resource or role-grant workaround is needed.
+Day 24 implementation and verification are complete and published. Future publishing still
+requires explicit authorization, green CI for the selected commit, a successful deployment,
+and a public read-only check. No paid resource or role-grant workaround is needed.
 
 Next: agree on frontend technology/layout and implement the client against the existing
 contract. Do not weaken API authorization, TLS, CORS or retry semantics to make UI work.

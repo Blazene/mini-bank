@@ -4,6 +4,19 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
+# Build and typecheck the browser client separately. Only dist enters runtime.
+FROM node:22-bookworm-slim AS frontend
+WORKDIR /web
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/index.html frontend/tsconfig.json frontend/vite.config.ts frontend/playwright.config.ts ./
+COPY frontend/src ./src
+COPY frontend/e2e ./e2e
+COPY frontend/public ./public
+# Public same-origin configuration only; never consume backend/cloud secrets here.
+ENV VITE_API_BASE=/api/v1
+RUN npm run build
+
 FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production PORT=3000 NPM_CONFIG_CACHE=/tmp/npm
 WORKDIR /app
@@ -13,6 +26,7 @@ COPY src ./src
 COPY scripts/make-admin.js ./scripts/make-admin.js
 COPY scripts/start-render.sh ./scripts/start-render.sh
 COPY db/migrations ./db/migrations
+COPY --from=frontend /web/dist ./public
 
 USER node
 EXPOSE 3000

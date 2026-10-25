@@ -41,12 +41,15 @@ test('only official actions are used, pinned to full commit SHAs', () => {
 
 test('jobs use Node 22 and lockfile caching, not cached host node_modules', () => {
   const setup = steps.filter((step) => step.uses && step.uses.startsWith('actions/setup-node@'));
-  expect(setup).toHaveLength(2);
+  expect(setup).toHaveLength(3);
   for (const step of setup) {
     expect(step.with).toEqual({
       'node-version': '22',
       cache: 'npm',
-      'cache-dependency-path': 'package-lock.json',
+      'cache-dependency-path':
+        step.with['cache-dependency-path'] === 'frontend/package-lock.json'
+          ? 'frontend/package-lock.json'
+          : 'package-lock.json',
     });
   }
   for (const job of jobs) {
@@ -120,10 +123,40 @@ test('Dependabot schedules npm, action pins and Docker base updates without auto
     'docker',
     'github-actions',
     'npm',
+    'npm',
   ]);
   for (const entry of updates.updates) {
-    expect(entry.directory).toBe('/');
+    expect(['/', '/frontend']).toContain(entry.directory);
     expect(entry.schedule.interval).toBe('weekly');
     expect(entry['open-pull-requests-limit']).toBe(5);
   }
+});
+
+test('frontend checks are isolated, lockfile-cached, and never run against cloud data', () => {
+  const job = workflow.jobs.frontend;
+  expect(job.defaults.run['working-directory']).toBe('frontend');
+  expect(job['timeout-minutes']).toBe(15);
+  expect(job.services).toBeUndefined();
+  expect(job.needs).toBeUndefined();
+  const setup = job.steps.find((step) => step.uses && step.uses.startsWith('actions/setup-node@'));
+  expect(setup.with['cache-dependency-path']).toBe('frontend/package-lock.json');
+  expect(job.steps.filter((step) => step.run).map((step) => step.run)).toEqual([
+    'npm ci',
+    'npm test',
+    'npm run build',
+    'npm audit --audit-level=high',
+    'npx playwright install --with-deps chromium',
+    'npm run test:e2e',
+  ]);
+  expect(
+    updates.updates
+      .filter((entry) => entry['package-ecosystem'] === 'npm')
+      .map((entry) => entry.directory)
+      .sort()
+  ).toEqual(['/', '/frontend']);
+  const config = require('../../jest.config');
+  expect(config.testPathIgnorePatterns).toContain('/frontend/');
+  expect(fs.readFileSync(path.join(root, 'Dockerfile'), 'utf8')).toContain(
+    'COPY --from=frontend /web/dist ./public'
+  );
 });

@@ -1,34 +1,44 @@
 # Architecture
 
 An educational **modular monolith**, not microservices, a payment processor or a full
-double-entry general ledger. One Node.js process serves all API modules. PostgreSQL is
+double-entry general ledger. One Node.js process serves the compiled React UI and all API modules. PostgreSQL is
 the source of truth; no browser may connect to it directly.
 
 ## Deployment and trust boundaries
 
 ```mermaid
 flowchart LR
-  Client[Swagger / HTTP client] -->|HTTPS + bearer JWT| Edge[Render managed edge]
+  Client[React / Swagger / HTTP client] -->|HTTPS + bearer JWT| Edge[Render managed edge]
   Edge -->|one trusted app-facing proxy hop| API[Express 5 / Node 22 container]
   API -->|direct PostgreSQL + verified TLS| DB[(Neon PostgreSQL 16)]
-  Git[GitHub main] --> CI[Tests + coverage + lint + audit]
-  CI --> Docker[Isolated Docker verification]
-  Docker -->|checks pass| Build[Render build and startup migrations]
+  Git[GitHub main] --> CI[Backend tests + coverage + lint + audit]
+  Git --> WebCI[Frontend tests + build + audit + browser checks]
+  CI --> Docker[Isolated Docker and bundled website verification]
+  Docker --> Build[Render build and startup migrations]
+  WebCI -->|all checks pass| Build
+  Web[React source and frontend lockfile] --> Assets[Separate Docker frontend build stage]
+  Assets -->|compiled assets only| Build
   Build --> API
   Secrets[Render private environment] --> API
 ```
 
 Render hosts a free Singapore web service; Neon hosts a separate free Singapore project.
+The React client builds from `frontend/` into the **same** Docker deployment, not a new
+static site. Express serves the UI at `/`, `/login`, `/app/*` and `/demo/*`; the API and
+Swagger remain under `/api/v1`. The public API base is same-origin `/api/v1`, so production
+CORS remains closed. The Vite proxy is used only in local development. UI and API share
+Render Free cold starts. See [frontend hosting](frontend.md#same-service-production-hosting).
 The runtime is non-root. The local Compose runtime additionally enforces a read-only
 filesystem/dropped capabilities; those Compose controls must **not** be assumed to be
-Render's container settings. The image excludes `.env`, source tests, host dependencies
-and Git history. The bootstrap validates configuration, applies migrations on a direct
+Render's container settings. The runtime image excludes `.env`, source tests, frontend
+source/build dependencies, host dependencies and Git history; only compiled frontend
+assets enter `/app/public`. The bootstrap validates configuration, applies migrations on a direct
 connection, then `exec`s Node. Database credentials/JWT signing secret are private runtime
 configuration, not frontend configuration or build artifacts.
 
 `TRUST_PROXY=1` assumes Render's app-facing topology; adding another proxy/CDN requires
 review. CORS denies unlisted browser origins in production, but is not authentication or
-a firewall. Same-origin Swagger is public and sends real requests. Limits are per process;
+a firewall. Same-origin frontend/Swagger are public and send real requests. Limits are per process;
 there is no shared Redis limiter or cross-instance coordination.
 
 ## Request and module boundaries
@@ -37,6 +47,7 @@ there is no shared Redis limiter or cross-instance coordination.
 flowchart TD
   HTTP[Express + Helmet + CORS + body limit + HTTP logging]
   HTTP --> Routes[Module routes: auth / accounts / transactions / loans / audit / monitoring]
+  HTTP --> Static[Compiled assets and restricted SPA fallback after API routes]
   Routes --> Guards[JWT / role / rate limit / Zod validation]
   Guards --> Controller[Controller: HTTP mapping]
   Controller --> Service[Service: business rules and orchestration]
@@ -52,6 +63,10 @@ validation failures). `src/modules/index.js` composes routes; `src/app.js` confi
 application; `src/server.js` owns listening/signals/shutdown. Modules expose services and
 repository operations rather than letting controllers issue SQL. Deliberate exceptions
 are operator scripts, migrations, database health queries and test fixtures.
+
+HTML is non-cacheable; hashed assets are immutable for one year. Unknown API/file requests
+remain JSON 404s, never SPA HTML. Static files inherit Helmet; no CDN-hosted fonts or browser
+database access are required. Customer tokens and retry intents remain memory-only.
 
 | Module       | Responsibility                                   | Important boundary                                               |
 | ------------ | ------------------------------------------------ | ---------------------------------------------------------------- |

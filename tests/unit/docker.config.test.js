@@ -24,6 +24,15 @@ test('build context is allowlisted and excludes source tests and environment fil
   expect(ignore).toContain('src/**/__tests__/**');
   expect(ignore).not.toMatch(/^!.*(?:\.env|node_modules|\.git|coverage)/m);
 });
+test('frontend is built in its own stage and runtime receives only same-origin compiled assets', () => {
+  expect(dockerfile).toContain('FROM node:22-bookworm-slim AS frontend');
+  expect(dockerfile).toContain('ENV VITE_API_BASE=/api/v1');
+  expect(dockerfile).toContain('COPY --from=frontend /web/dist ./public');
+  expect(dockerfile).not.toContain('COPY frontend ./frontend');
+  expect(ignore).toContain('**/.env*');
+  expect(ignore).toContain('!frontend/package-lock.json');
+  expect(ignore).not.toContain('!frontend/node_modules');
+});
 test('API and migration job are opt-in; existing PostgreSQL volume and local workflow are preserved', () => {
   expect(compose.services.db.profiles).toBeUndefined();
   expect(compose.services.api.profiles).toEqual(['app']);

@@ -3,7 +3,8 @@
 **Scope:** point-in-time source/configuration review and bounded regression/smoke checks,
 25 October 2026. This is **not** an independent penetration test, compliance attestation,
 load test or approval to use real funds/personal data. The public deployment remains an
-educational demo. Day 24's changes are local until explicitly committed/pushed.
+educational demo. Day 24 was subsequently published as `1302383`, with
+[green hosted CI](https://github.com/Blazene/mini-bank/actions/runs/40195821465) and a successful Render auto-deploy.
 
 ## Findings addressed locally
 
@@ -40,7 +41,7 @@ already committed or replace review/secret scanning; none were intentionally int
 | Ownership / roles     | Owner-scoped account/application reads, 404 concealment; customer admin 403; no HTTP grant route                                                    | Admin audit listing trusts token role until expiry; not all auth state is reloaded on every route                     |
 | SQL / money           | Parameterized repositories, nonnegative/check constraints, sorted locks, atomic ledger/balances/monitoring, scoped retry keys; DB/concurrency tests | Simulated deposits, not payment rails or full double-entry accounting                                                 |
 | Input / errors        | Zod validation, 10 KB JSON limit, generic 5xx envelope, safe integer paise                                                                          | Availability/query duration is not universally bounded by a statement timeout                                         |
-| Browser / edge        | Helmet, HSTS over hosted HTTPS, no X-Powered-By, closed production CORS; live read-only checker passed                                              | CORS is not access control; allow exact frontend origin only when known                                               |
+| Browser / edge        | Helmet, HSTS over hosted HTTPS, no X-Powered-By, closed production CORS; live read-only checker passed                                              | Bundled frontend uses the same origin; no new CORS permission is required; CORS is not access control                 |
 | Rate limiting / proxy | Enabled per-IP/email/user MemoryStore limits; configured TRUST_PROXY=1                                                                              | Counters reset on restart and are independent during overlaps; independent-client IP isolation was not verified       |
 | Logs / audit          | Authorization/Cookie/Set-Cookie redaction, selected metadata, append-only audit trigger; local tests/Docker probes                                  | Audit delivery is post-response/best-effort; arbitrary log text and privileged DB operators remain risks              |
 | Database connection   | Direct Neon endpoint, verify-full startup requirement, bounded pool/connect timeout                                                                 | Runtime role also runs migrations and has DDL capability; split migration/runtime privileges before a real deployment |
@@ -66,9 +67,9 @@ the existing deployment, checking health/DB, HSTS/nosniff/framework-header omiss
 unlisted-origin CORS, OpenAPI/same-origin server, Swagger HTML and 401 guards. It created
 no users/accounts/money/applications. Existing request/audit logs are normal server effects.
 
-The deployed baseline `62f4f35` has [both CI jobs green](https://github.com/Blazene/mini-bank/actions/runs/40193207093).
-That hosted run is **not** CI for the unpushed Day 24 changes. See [Day 24](day-24.md) for
-fresh local results. No load flood, cloud admin grant, secret rotation, database reset,
+The Day 24 deployment `1302383` has [both CI jobs green](https://github.com/Blazene/mini-bank/actions/runs/40195821465).
+See [Day 24](day-24.md) for its local results. The new frontend is a later, initially local
+change and must obtain its own CI result when published. No load flood, cloud admin grant, secret rotation, database reset,
 plan upgrade, security-setting mutation or production restart was performed in Day 24.
 
 ## Dependabot review — no merges
@@ -101,8 +102,10 @@ audit results are recorded in Day 24; keep auditing after dependency changes.
   incident response, secret/access rotation, HA, observability and privacy/data minimization
   are prerequisites for valuable data. Free-tier quotas and cold starts are not an SLA.
 - A shared rate-limit store and verified forwarding topology are prerequisites for scaling;
-  frontend token/storage/XSS/accessibility review is still future work.
+  the later frontend uses memory-only tokens/retry intents, React escaping, self-hosted
+  assets and automated accessibility checks. See [frontend scope and verification](frontend.md)
+  for evidence and limits; those checks are not a complete XSS or accessibility audit.
 
 Do not remove guards, weaken TLS, enable wildcard CORS, silently add paid resources or
 erase evidence to make a demo pass. Keep [frontend handoff](frontend-handoff.md) invariants
-when building the website next.
+when extending the website.

@@ -203,7 +203,7 @@ async function verify() {
     `
     const fs = require('node:fs');
     if (process.getuid() === 0) throw Error('Root runtime');
-    for (const file of ['.env', '.env.test', '.env.example', '.git', 'tests', 'coverage',
+    for (const file of ['.env', '.env.test', '.env.example', '.git', 'tests', 'coverage', 'frontend',
       'node_modules/jest', 'node_modules/nodemon', 'node_modules/eslint']) {
       if (fs.existsSync('/app/' + file)) throw Error('Forbidden runtime file: ' + file);
     }
@@ -214,6 +214,10 @@ async function verify() {
       }
     }
     walk('/app/src');
+    if (!fs.existsSync('/app/public/index.html')) throw Error('Compiled frontend is missing');
+    for (const file of ['src', 'e2e', 'node_modules', 'vite.config.ts', 'playwright.config.ts', '.env']) {
+      if (fs.existsSync('/app/public/' + file)) throw Error('Build input leaked into public assets: ' + file);
+    }
     const bcrypt = require('bcrypt');
     if (!bcrypt.compareSync('docker1234', bcrypt.hashSync('docker1234', 4))) throw Error('Native bcrypt failed');
   `,
@@ -251,6 +255,37 @@ async function verify() {
   assert.equal((await fetch(`${base}/api/v1/docs/`)).status, 200);
   assert.equal((await call('GET', '/openapi.json')).body.openapi, '3.0.3');
   await require('../../scripts/verify-demo').verify({ base });
+
+  console.log(
+    'Checking the same-origin production website, deep links, assets and API fallback isolation.'
+  );
+  const homepage = await fetch(base, { headers: { Accept: 'text/html' } });
+  assert.equal(homepage.status, 200);
+  assert.equal(homepage.headers.get('cache-control'), 'no-store');
+  assert.match(homepage.headers.get('content-security-policy'), /script-src 'self'/);
+  const html = await homepage.text();
+  assert.match(html, /id="root"/);
+  for (const route of ['/login', '/demo/overview', '/app/accounts']) {
+    const page = await fetch(`${base}${route}`, { headers: { Accept: 'text/html' } });
+    assert.equal(page.status, 200);
+    assert.equal(await page.text(), html);
+  }
+  const script = html.match(/src="(\/assets\/[^\"]+\.js)"/);
+  assert.ok(script, 'Website must reference a compiled client bundle');
+  const asset = await fetch(`${base}${script[1]}`);
+  assert.equal(asset.status, 200);
+  assert.match(asset.headers.get('content-type'), /javascript/);
+  assert.match(asset.headers.get('cache-control'), /max-age=31536000, immutable/);
+  for (const route of [
+    '/api/v1/not-a-route',
+    '/api/v9/index.html',
+    '/assets/missing.js',
+    '/.env',
+  ]) {
+    const missing = await fetch(`${base}${route}`, { headers: { Accept: 'text/html' } });
+    assert.equal(missing.status, 404);
+    assert.match(missing.headers.get('content-type'), /application\/json/);
+  }
 
   console.log(
     'Checking real container auth, money, loans, admin command, monitoring and log privacy.'

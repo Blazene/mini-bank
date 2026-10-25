@@ -1,7 +1,7 @@
-# Frontend handoff (planning only)
+# Frontend API handoff
 
-Day 24 completes the backend review/demo work. **No frontend is implemented yet.** The next
-phase can use the existing API; do not quietly change backend money or permission rules
+Day 24 completed the backend review/demo work. The initial React client is now implemented
+in `frontend/`; see [frontend setup and scope](frontend.md). Use the existing API; do not quietly change backend money or permission rules
 to simplify a screen.
 
 ## Public configuration and browser access
@@ -11,9 +11,10 @@ to simplify a screen.
   [interactive Swagger](https://mini-bank-api-2bxt.onrender.com/api/v1/docs/).
 - Only the public API base belongs in frontend environment variables. **Never** copy
   `DATABASE_URL`, database passwords, `JWT_SECRET`, deploy hooks or cloud credentials there.
-- Production CORS currently grants no separate frontend origin. Once the real origin is
-  known, explicitly allow it in Render's `CORS_ORIGINS` (exact scheme/host/port, no trailing
-  slash/wildcards/path). A local development proxy is another option, not configured yet.
+- The frontend is bundled into the existing Render Docker service with `VITE_API_BASE=/api/v1`.
+  Website/API share an origin, so leave production `CORS_ORIGINS` unset. No separate static
+  host or cross-origin permission is needed. The Vite local development proxy is configured
+  in `frontend/vite.config.ts`; it is not used in production.
   CORS is not a bypass for authentication and is not a reason to disable guards.
 - Keep the public educational/no-real-money warning visible. Handle free-tier wake-ups
   with a clear loading/retry state, not rapid automatic polling or repeated registration.
@@ -43,7 +44,7 @@ to simplify a screen.
 7. Render review reasons/validation strings as text (React escaping), not injected HTML.
    Keep arbitrary backend data out of `dangerouslySetInnerHTML`.
 
-## Suggested first screens
+## Customer screens implemented in the first phase
 
 | Screen                 | Existing API / behavior                                                                    |
 | ---------------------- | ------------------------------------------------------------------------------------------ |
@@ -58,7 +59,7 @@ There are no list-all loan applications, logout/revoke-token, account-freeze, re
 loan-disbursement APIs to invent client-side. Keep returned application ids for detail
 navigation until a separately scoped backend listing endpoint is designed.
 
-Before frontend publishing: test exact-origin CORS/preflight, loading/error/empty states,
+Before frontend publishing: verify same-origin API calls and closed cross-origin CORS, loading/error/empty states,
 keyboard accessibility, money parsing, stable retries after timeout, 401 expiry, role denial
 and browser storage/log privacy. Do not create new paid resources or change the cloud
-security configuration as part of this planning document.
+security configuration without a deployment decision.
