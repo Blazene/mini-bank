@@ -158,15 +158,48 @@ official actions, needs no repository/production secrets, and does not publish o
 Weekly Dependabot checks cover npm, GitHub Actions pins and Docker base images; updates
 still require review and passing CI, not automatic merging.
 
-The badge reflects **hosted runs**, not local test results. The first run must be checked
-in the [Actions tab](https://github.com/Blazene/mini-bank/actions) after the workflow is
-pushed. Repository administrators may separately require both job checks in branch
+The badge reflects **hosted runs**, not local test results. Both jobs passed for Day 22
+commit `47949cc` ([hosted run](https://github.com/Blazene/mini-bank/actions/runs/40187980401));
+check each later commit in the [Actions tab](https://github.com/Blazene/mini-bank/actions).
+Repository administrators may separately require both job checks in branch
 protection/rulesets; this configuration does not enable those settings automatically.
 
 Reports are generated locally under ignored `coverage/`. They include the operator script;
 its child-process smoke tests do not merge into Jest's in-process coverage figures. See
 [`docs/day-19.md`](docs/day-19.md) for the measurement scope and caveats. High coverage is
 not proof of correctness or a security certification.
+
+## Deploy a free demo: Render + Neon
+
+[`docs/day-23.md`](docs/day-23.md) is the deployment runbook. **The configuration is locally
+verified; a live deployment has not yet been verified or assigned a public URL.**
+
+1. Push this configuration and confirm CI is green on the commit to deploy.
+2. Create a separate **Neon Free** PostgreSQL 16 project, preferably in AWS Singapore.
+   Leave optional Neon services disabled. In Connect, turn **connection pooling off**.
+3. In the direct connection URL, replace `sslmode=require` with `sslmode=verify-full`.
+   Keep the URL private; do not paste it in chat, Git, issues, screenshots or logs.
+4. In Render, create a **Blueprint** from this repository's `main` branch and `render.yaml`.
+   Confirm **Free**, Singapore and one API instance; paste the URL directly into the
+   prompted `DATABASE_URL` secret. Render generates `JWT_SECRET`. Do not add a Render
+   database, paid disk, extra instance, card or plan upgrade for this demo.
+5. After a successful deploy, verify HTTPS `/api/v1/health`, `/api/v1/docs/` and the
+   disposable auth/account/money checks in the runbook. Keep tokens and credentials private.
+
+Render runs `/bin/sh scripts/start-render.sh`: validate environment/direct Neon TLS,
+apply migrations, then `exec node src/server.js`. A validation or migration failure
+prevents HTTP startup. The normal Docker/Compose start path is unchanged. Automatic
+deploys use `checksPass`; GitHub must be connected with access to CI check results.
+
+Production defaults to **no cross-origin browser permission**; same-origin Swagger and
+non-browser API clients still work. Set `CORS_ORIGINS` in Render only for specific frontend
+origins, for example `https://frontend.example` (no trailing slash or wildcard). CORS is
+not authentication or a firewall. `TRUST_PROXY=1` assumes Render's single trusted proxy;
+recheck that assumption if adding another proxy/CDN.
+
+Free services have quotas and cold starts: Render sleeps after 15 idle minutes, and Neon
+can suspend idle compute. Render's free Postgres expires after 30 days, so it is deliberately
+not used. Neither provider's free tier is suitable for real banking data or an uptime SLA.
 
 ## Try a read-only loan quote
 
@@ -243,16 +276,19 @@ balances and ledger writes commit atomically: monitoring failure rolls back the 
 
 ## Configuration
 
-| Variable             | Meaning                                                                               |
-| -------------------- | ------------------------------------------------------------------------------------- |
-| `DATABASE_URL`       | PostgreSQL connection; development and tests must be separate                         |
-| `JWT_SECRET`         | At least 32 characters; generate a private random value                               |
-| `JWT_EXPIRES_IN`     | Token lifetime, default `1h`                                                          |
-| `BCRYPT_ROUNDS`      | Password work factor, 4–15; development example uses 12                               |
-| `PORT`               | API port, default 3000                                                                |
-| `RATE_LIMIT_ENABLED` | Literal `true`/`false`, default true; test config disables it                         |
-| `TRUST_PROXY`        | Number of trusted proxy hops, default 0; configure for the actual deployment topology |
-| `NODE_ENV`           | `development`, `test` or `production`; test selects `.env.test`                       |
+| Variable                   | Meaning                                                                                     |
+| -------------------------- | ------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`             | PostgreSQL connection; development and tests must be separate                               |
+| `JWT_SECRET`               | At least 32 characters; generate a private random value                                     |
+| `JWT_EXPIRES_IN`           | Token lifetime, default `1h`                                                                |
+| `BCRYPT_ROUNDS`            | Password work factor, 4–15; development example uses 12                                     |
+| `PORT`                     | API port, default 3000                                                                      |
+| `RATE_LIMIT_ENABLED`       | Literal `true`/`false`, default true; test config disables it                               |
+| `TRUST_PROXY`              | Number of trusted proxy hops, default 0; configure for the actual deployment topology       |
+| `NODE_ENV`                 | `development`, `test` or `production`; test selects `.env.test`                             |
+| `CORS_ORIGINS`             | Comma-separated exact HTTP(S) origins; empty denies CORS in production, permits `*` locally |
+| `DB_POOL_MAX`              | Maximum connections per process, 1–20; default 10, Render uses 5                            |
+| `DB_CONNECTION_TIMEOUT_MS` | Connection acquisition timeout, 1000–60000 ms; default 10000                                |
 
 Compose-only optional settings: `API_PORT` (default 3000), `DB_PORT` (default 5432), and
 `APP_IMAGE` (default `mini-bank-api:local`). Container `NODE_ENV` is always `production`;
@@ -282,6 +318,7 @@ Money movements use one transaction/connection and lock account rows in fixed id
 - [`docs/verification-days-15-19.md`](docs/verification-days-15-19.md): verification findings and dependency fix.
 - [`docs/day-21.md`](docs/day-21.md): container design, isolated verification and log redaction.
 - [`docs/day-22.md`](docs/day-22.md): GitHub Actions jobs, supply-chain controls and verification scope.
+- [`docs/day-23.md`](docs/day-23.md): free Render/Neon deployment, private configuration and live verification checklist.
 
 ## Security and remaining limitations
 
@@ -289,10 +326,12 @@ JWT algorithm pinning, bcrypt, Zod validation, parameterized SQL, Helmet, a 10 K
 limit, ownership checks, rate limits and admin guards provide layered defenses. They do
 not make this a production-ready bank. Do not expose this demo to real customer data.
 
-- Audit writes happen after responses and can be lost on a crash. The audit-list route
+- Audit writes happen after responses and can be lost on a crash (graceful shutdown drains
+  pending writes). The audit-list route
   trusts the token role until expiry; loan-review and alert endpoints recheck the database.
-- Rate limits are in-memory and are not shared between processes. CORS is currently open;
-  production needs an explicit origin/proxy/TLS/secrets configuration.
+- Rate limits are in-memory, reset on restart and are not shared between processes. Keep
+  one API instance; overlapping deploys can briefly have independent limits. Production
+  CORS is closed by default; proxy/TLS/secrets still require correct provider configuration.
 - No refresh tokens, reset/verification email, aggregate loan exposure control or durable
   audit delivery. Admin grant and its audit write are separate statements.
 - Alert evidence is not protected by the audit table's append-only trigger. Thresholds
@@ -304,5 +343,5 @@ not make this a production-ready bank. Do not expose this demo to real customer 
   production logs. This is not a blanket guarantee that arbitrary future log messages
   cannot contain sensitive data.
 
-Next roadmap items: confirm hosted CI is green, deployment,
-production configuration review and final demonstration/polish. A frontend is optional.
+Next roadmap items: publish and verify the Day 23 deployment, then final configuration
+review and demonstration/polish. A frontend is optional.

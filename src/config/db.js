@@ -1,7 +1,16 @@
 const { Pool } = require('pg');
 const env = require('./env');
+const logger = require('../shared/utils/logger');
 
-const pool = new Pool({ connectionString: env.DATABASE_URL });
+const pool = new Pool({
+  connectionString: env.DATABASE_URL,
+  max: env.DB_POOL_MAX,
+  connectionTimeoutMillis: env.DB_CONNECTION_TIMEOUT_MS,
+});
+
+// Serverless PostgreSQL can close idle connections during suspension/maintenance.
+// pg removes that client; log the event instead of crashing on an unhandled emitter error.
+pool.on('error', (err) => logger.error({ err }, 'Idle PostgreSQL client error'));
 
 // Runs fn(client) inside ONE database transaction on ONE connection.
 // If fn finishes, everything it did is committed together. If it throws, everything is

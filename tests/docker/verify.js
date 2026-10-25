@@ -22,11 +22,15 @@ const env = {
   BCRYPT_ROUNDS: '4',
   RATE_LIMIT_ENABLED: 'true',
   TRUST_PROXY: '0',
+  CORS_ORIGINS: '',
+  DB_POOL_MAX: '5',
+  DB_CONNECTION_TIMEOUT_MS: '10000',
 };
 const prefix = ['compose', '--env-file', '/dev/null', '-p', project];
 let base;
 let safeProject = false;
 let built = false;
+let cloudContainer;
 
 const scrub = (text) =>
   secrets.reduce((value, secret) => value.split(secret).join('[Redacted]'), text);
@@ -82,6 +86,73 @@ async function person(email) {
   assert.equal(login.status, 200);
   secrets.push(login.body.token);
   return { ...login.body, email, password: body.password };
+}
+
+async function verifyRenderStartup() {
+  console.log('Checking the Render bootstrap with a fresh isolated database and port 10000.');
+  await compose(['up', '--no-build', '-d', '--wait', 'db']);
+  await compose(['exec', '-T', 'db', 'createdb', '-U', 'bank', 'minibank_render']);
+  const port = await freePort();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    cloudContainer = `${project}_render`;
+    await compose([
+      'run',
+      '--no-deps',
+      '-d',
+      '--name',
+      cloudContainer,
+      '-e',
+      'DATABASE_URL=postgres://bank:bankpass@db:5432/minibank_render',
+      '-e',
+      'PORT=10000',
+      '-p',
+      `127.0.0.1:${port}:10000`,
+      'api',
+      '/bin/sh',
+      'scripts/start-render.sh',
+    ]);
+    let ready = false;
+    for (let n = 0; n < 120; n++) {
+      try {
+        const response = await fetch(`http://127.0.0.1:${port}/api/v1/health`, {
+          headers: { Origin: 'https://untrusted.example' },
+          signal: AbortSignal.timeout(2000),
+        });
+        if (response.ok) {
+          assert.deepEqual(await response.json(), { status: 'ok', database: 'up' });
+          assert.equal(response.headers.get('access-control-allow-origin'), null);
+          ready = true;
+          break;
+        }
+      } catch {
+        /* bounded wait while migrations run and HTTP becomes available */
+      }
+      await pause(500);
+    }
+    assert.ok(ready, 'Render bootstrap did not become healthy');
+    const count = await compose([
+      'exec',
+      '-T',
+      'db',
+      'psql',
+      '-U',
+      'bank',
+      '-d',
+      'minibank_render',
+      '-At',
+      '-c',
+      'SELECT count(*) FROM pgmigrations',
+    ]);
+    assert.equal(count.stdout.trim(), '5');
+    const logs = (await run(['logs', cloudContainer])).stdout;
+    if (attempt === 1) assert.match(logs, /No migrations to run/);
+    assert.ok(!logs.includes(env.JWT_SECRET), 'Bootstrap logged the JWT secret');
+    await run(['stop', '--time', '20', cloudContainer]);
+    const stopped = JSON.parse((await run(['inspect', cloudContainer])).stdout)[0];
+    assert.equal(stopped.State.ExitCode, 0, 'Render process must handle SIGTERM cleanly');
+    await run(['rm', cloudContainer]);
+    cloudContainer = undefined;
+  }
 }
 
 async function verify() {
@@ -162,6 +233,8 @@ async function verify() {
   );
   assert.notEqual(invalid.code, 0, 'Container must refuse a short secret');
   assert.match(invalid.stderr, /JWT_SECRET/);
+
+  await verifyRenderStartup();
 
   console.log('Starting isolated PostgreSQL, one-off migrations and the API; waiting for health.');
   await compose(['up', '--no-build', '-d', '--wait', '--wait-timeout', '120']);
@@ -304,7 +377,7 @@ async function verify() {
   const migrations = await compose(['logs', '--no-color', 'migrate']);
   assert.match(migrations.stdout, /No migrations to run/);
   console.log(
-    'PASS: image isolation, native bcrypt, non-root/read-only runtime, health, migrations, API flows, redaction and volume persistence.'
+    'PASS: image isolation, bcrypt, non-root runtime, Render bootstrap/restart/shutdown, health, migrations, API flows, redaction and persistence.'
   );
 }
 
@@ -315,11 +388,19 @@ async function verify() {
   } catch (error) {
     failed = true;
     console.error(scrub(error.message));
+    if (cloudContainer) {
+      const logs = await run(['logs', cloudContainer], { allowFailure: true }).catch(() => null);
+      if (logs) console.error(scrub(logs.stdout + logs.stderr).slice(-8000));
+    }
     const logs = await compose(['logs', '--no-color', 'api', 'migrate'], {
       allowFailure: true,
     }).catch(() => null);
     if (logs) console.error(scrub(logs.stdout).slice(-8000));
   } finally {
+    if (cloudContainer) {
+      // Only this invocation's uniquely named bootstrap container.
+      await run(['rm', '-f', cloudContainer], { allowFailure: true }).catch(() => null);
+    }
     // Name contains a fresh random suffix owned by this invocation, never the default project.
     if (safeProject) {
       const cleanup = await compose(['down', '--volumes', '--remove-orphans'], {

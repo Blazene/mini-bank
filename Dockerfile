@@ -11,6 +11,7 @@ COPY --from=dependencies /app/node_modules ./node_modules
 COPY package.json package-lock.json ./
 COPY src ./src
 COPY scripts/make-admin.js ./scripts/make-admin.js
+COPY scripts/start-render.sh ./scripts/start-render.sh
 COPY db/migrations ./db/migrations
 
 USER node

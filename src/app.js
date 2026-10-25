@@ -7,6 +7,7 @@ const notFound = require('./shared/middleware/notFound');
 const errorHandler = require('./shared/middleware/errorHandler');
 const env = require('./config/env');
 const { apiLimiter } = require('./shared/middleware/rateLimit');
+const corsOptions = require('./shared/middleware/corsOptions');
 
 const app = express();
 
@@ -16,7 +17,7 @@ const app = express();
 app.set('trust proxy', env.TRUST_PROXY);
 
 app.use(helmet());
-app.use(cors());
+app.use(cors(corsOptions(env)));
 // Before the body parser, so a flood is refused before any body is read.
 app.use('/api/v1', apiLimiter);
 app.use(express.json({ limit: '10kb' }));

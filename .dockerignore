@@ -10,6 +10,7 @@ src/**/__tests__/
 src/**/__tests__/**
 !scripts/
 !scripts/make-admin.js
+!scripts/start-render.sh
 !db/
 !db/migrations/
 !db/migrations/*.sql
